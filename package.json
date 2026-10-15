@@ -1,0 +1,32 @@
+{
+  "name": "wildborn-web-game",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "assets": "node tools/asset-pipeline/build.mjs",
+    "import-megakit": "sh tools/asset-pipeline/import-megakit.sh"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.30.0",
+    "@babylonjs/loaders": "^9.30.0",
+    "@fontsource/saira-extra-condensed": "^5.3.0",
+    "meshoptimizer": "^1.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@gltf-transform/cli": "^4.5.1",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  }
+}

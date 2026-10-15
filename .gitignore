@@ -1,0 +1,6 @@
+node_modules
+dist
+.DS_Store
+*.blend1
+# Derived from the Quaternius MegaKit: recreate with tools/asset-pipeline/import-megakit.sh
+art-source/environment/
