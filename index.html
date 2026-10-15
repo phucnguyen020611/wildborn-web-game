@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="" />
+    <meta name="theme-color" content="#14110f" />
+    <title>WILDBORN</title>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <div id="hud" hidden>
+      <div class="hud-vignette"></div>
+      <div class="crosshair"></div>
+      <p class="hud-objective" data-i18n="hud.objective"></p>
+      <div class="hud-target" hidden>
+        <span id="hud-target-name" class="hud-label" data-i18n="creature.fox"></span>
+        <div
+          class="bar"
+          role="meter"
+          aria-labelledby="hud-target-name"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <div class="bar-fill"></div>
+        </div>
+      </div>
+      <div class="hud-player">
+        <div class="hud-row">
+          <span id="hud-health-label" class="hud-label" data-i18n="hud.health"></span>
+          <span class="hud-hp-value"></span>
+        </div>
+        <div
+          class="bar"
+          role="meter"
+          aria-labelledby="hud-health-label"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <div class="bar-fill"></div>
+        </div>
+      </div>
+      <p class="hud-spear"></p>
+    </div>
+
+    <div id="debug" hidden></div>
+
+    <section id="menu-main" class="screen" hidden>
+      <div class="panel">
+        <h1>WILDBORN</h1>
+        <p class="tagline" data-i18n="menu.tagline"></p>
+        <button class="btn btn-primary" data-action="play" data-i18n="menu.play"></button>
+        <p class="hint warn relock-hint" role="status" data-i18n="pause.relock" hidden></p>
+        <button class="btn" data-action="settings" data-i18n="menu.settings"></button>
+        <div class="lang" role="group" aria-labelledby="lang-label-main">
+          <span id="lang-label-main" class="lang-label" data-i18n="menu.language"></span>
+          <button class="btn btn-small" data-lang="vi" lang="vi">Tiếng Việt</button>
+          <button class="btn btn-small" data-lang="en" lang="en">English</button>
+        </div>
+        <p class="hint" data-i18n="menu.controls"></p>
+      </div>
+    </section>
+
+    <section id="menu-pause" class="screen" hidden>
+      <div class="panel">
+        <h2 data-i18n="pause.title"></h2>
+        <button class="btn btn-primary" data-action="play" data-i18n="pause.resume"></button>
+        <p class="hint warn relock-hint" role="status" data-i18n="pause.relock" hidden></p>
+        <button class="btn" data-action="settings" data-i18n="menu.settings"></button>
+        <div class="lang" role="group" aria-labelledby="lang-label-pause">
+          <span id="lang-label-pause" class="lang-label" data-i18n="menu.language"></span>
+          <button class="btn btn-small" data-lang="vi" lang="vi">Tiếng Việt</button>
+          <button class="btn btn-small" data-lang="en" lang="en">English</button>
+        </div>
+        <p class="hint" data-i18n="menu.controls"></p>
+      </div>
+    </section>
+
+    <section id="menu-settings" class="screen" hidden>
+      <div class="panel panel-wide">
+        <h2 data-i18n="settings.title"></h2>
+        <fieldset class="settings-group">
+          <legend data-i18n="settings.controls"></legend>
+          <label class="setting">
+            <span data-i18n="settings.sensitivity"></span>
+            <input
+              type="range"
+              min="0.2"
+              max="3"
+              step="0.1"
+              data-setting="sensitivity"
+              data-format="x"
+            />
+            <output></output>
+          </label>
+          <label class="setting">
+            <span data-i18n="settings.invert_y"></span>
+            <input type="checkbox" data-setting="invertY" />
+          </label>
+        </fieldset>
+        <fieldset class="settings-group">
+          <legend data-i18n="settings.video"></legend>
+          <label class="setting">
+            <span data-i18n="settings.fov"></span>
+            <input type="range" min="80" max="120" step="1" data-setting="fov" data-format="deg" />
+            <output></output>
+          </label>
+          <div class="setting">
+            <span id="quality-label" data-i18n="settings.quality"></span>
+            <div class="segmented" role="group" aria-labelledby="quality-label">
+              <button
+                class="btn btn-small"
+                data-quality="low"
+                data-i18n="settings.quality_low"
+              ></button>
+              <button
+                class="btn btn-small"
+                data-quality="medium"
+                data-i18n="settings.quality_medium"
+              ></button>
+              <button
+                class="btn btn-small"
+                data-quality="high"
+                data-i18n="settings.quality_high"
+              ></button>
+            </div>
+          </div>
+          <label class="setting">
+            <span data-i18n="settings.shake"></span>
+            <input type="checkbox" data-setting="shake" />
+          </label>
+        </fieldset>
+        <fieldset class="settings-group">
+          <legend data-i18n="settings.audio"></legend>
+          <label class="setting">
+            <span data-i18n="settings.master"></span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              data-setting="master"
+              data-format="pct"
+            />
+            <output></output>
+          </label>
+          <label class="setting">
+            <span data-i18n="settings.sfx"></span>
+            <input type="range" min="0" max="1" step="0.05" data-setting="sfx" data-format="pct" />
+            <output></output>
+          </label>
+          <label class="setting">
+            <span data-i18n="settings.ambience"></span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              data-setting="ambience"
+              data-format="pct"
+            />
+            <output></output>
+          </label>
+        </fieldset>
+        <button class="btn btn-primary" data-action="back" data-i18n="settings.back"></button>
+      </div>
+    </section>
+
+    <section id="menu-end" class="screen" hidden>
+      <div class="panel">
+        <h2 class="end-title"></h2>
+        <p class="end-stats tagline"></p>
+        <button class="btn btn-primary" data-action="play" data-i18n="end.retry"></button>
+        <button class="btn" data-action="menu" data-i18n="end.menu"></button>
+      </div>
+    </section>
+
+    <section id="error" class="screen" role="alert" hidden>
+      <div class="panel">
+        <h2>WILDBORN</h2>
+        <p data-i18n="error.webgl"></p>
+        <button class="btn" onclick="location.reload()" data-i18n="error.reload"></button>
+      </div>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
