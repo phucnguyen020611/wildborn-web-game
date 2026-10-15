@@ -10,42 +10,68 @@ import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
+import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
+import { createSky } from './sky';
 import { PLAYER } from '../config/player';
 import type { MapData } from '../maps/testArena';
 import type { PlayerState } from '../sim/player';
 import { createSpearViewmodel, createThrownSpear } from './viewmodel';
 
-// Render resolution per preset: cap devicePixelRatio (Retina/4K) and optionally render below native.
-const QUALITY: Record<Quality, { maxDpr: number; scale: number }> = {
-  low: { maxDpr: 1, scale: 0.75 },
-  medium: { maxDpr: 1.5, scale: 1 },
-  high: { maxDpr: 2, scale: 1 },
+// Per preset: cap devicePixelRatio (Retina/4K), optionally render below native, and toggle sun shadows.
+const QUALITY: Record<Quality, { maxDpr: number; scale: number; shadows: boolean }> = {
+  low: { maxDpr: 1, scale: 0.75, shadows: false },
+  medium: { maxDpr: 1.5, scale: 1, shadows: true },
+  high: { maxDpr: 2, scale: 1, shadows: true },
 };
 
-/** Blockout scene. Reads sim state; never writes to it. */
+// Palette (docs/ART_GUIDE.md): soft daylight, horizon haze doubles as fog so distant trees fade into the sky.
+const HORIZON = new Color3(0.78, 0.84, 0.78);
+
+/** World scene: sky, light, ground, viewmodel. Reads sim state; never writes to it. */
 export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
   const engine = new Engine(canvas, true, { stencil: false }, false);
 
   const scene = new Scene(engine);
-  const sky = new Color3(0.55, 0.62, 0.58);
-  scene.clearColor = Color4.FromColor3(sky);
+  scene.clearColor = Color4.FromColor3(HORIZON);
   scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogDensity = 0.02;
-  scene.fogColor = sky;
+  scene.fogDensity = 0.014;
+  scene.fogColor = HORIZON;
+  createSky(scene, [
+    [0, '#5f97c4'], // zenith
+    [0.42, '#a9c6d8'],
+    [0.5, HORIZON.toHexString()], // horizon
+    [1, HORIZON.toHexString()],
+  ]);
 
   const camera = new FreeCamera('eye', new Vector3(0, PLAYER.eyeHeight, 0), scene);
   camera.minZ = 0.05;
   camera.fovMode = Camera.FOVMODE_HORIZONTAL_FIXED; // FOV setting means the same on any aspect ratio
 
   const skyLight = new HemisphericLight('sky', new Vector3(0, 1, 0), scene);
-  skyLight.intensity = 0.7;
+  skyLight.intensity = 0.65;
+  skyLight.diffuse = new Color3(0.88, 0.93, 1); // cool skylight
   skyLight.groundColor = new Color3(0.35, 0.38, 0.28); // grass bounce; default black leaves undersides pitch dark
-  new DirectionalLight('sun', new Vector3(-0.5, -1, 0.3), scene).intensity = 0.8;
+  const sun = new DirectionalLight('sun', new Vector3(-0.55, -0.75, 0.4), scene);
+  sun.intensity = 1.25;
+  sun.diffuse = new Color3(1, 0.94, 0.82); // warm sunlight
+  sun.position = sun.direction.scale(-60);
+  sun.autoCalcShadowZBounds = true; // fit depth range to the casters; the camera's 10 km range would swamp the bias
+
+  // One shadow-casting light (spec 12.1): creatures and boulders cast, the ground receives.
+  const shadows = new ShadowGenerator(2048, sun);
+  shadows.usePercentageCloserFiltering = true;
+  shadows.bias = 0.002;
+  shadows.normalBias = 0.02;
+  const castShadow = (m: AbstractMesh) => shadows.addShadowCaster(m, false);
 
   const groundMat = new StandardMaterial('ground', scene);
-  groundMat.diffuseColor = new Color3(0.33, 0.4, 0.22);
+  groundMat.diffuseColor = new Color3(0.36, 0.45, 0.23);
   groundMat.specularColor = Color3.Black();
-  CreateGround('ground', { width: map.size, height: map.size }, scene).material = groundMat;
+  const ground = CreateGround('ground', { width: map.size, height: map.size }, scene);
+  ground.material = groundMat;
+  ground.receiveShadows = true;
 
   const rockMat = new StandardMaterial('rock', scene);
   rockMat.diffuseColor = new Color3(0.45, 0.4, 0.34);
@@ -89,6 +115,7 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
     const q = QUALITY[st.quality];
     engine.setHardwareScalingLevel(1 / (Math.min(window.devicePixelRatio, q.maxDpr) * q.scale));
     shakeEnabled = st.shake;
+    sun.shadowEnabled = q.shadows;
   });
 
   /** Short camera shake on impact; off when disabled in settings or the OS asks for reduced motion. */
@@ -97,5 +124,5 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
       shakeUntil = performance.now() + SHAKE_MS;
   }
 
-  return { engine, scene, camera, render, viewmodel, thrownSpear, shake };
+  return { engine, scene, camera, render, viewmodel, thrownSpear, shake, castShadow };
 }

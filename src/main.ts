@@ -58,7 +58,8 @@ function main() {
     creatures: world.creatures.map((c) => ({ ...c.state })),
     thrown: null as typeof world.thrown,
   };
-  if (import.meta.env.DEV) Object.assign(window, { scene: renderer.scene, world, prev, input }); // console inspection
+  if (import.meta.env.DEV)
+    Object.assign(window, { scene: renderer.scene, world, prev, input, map }); // console inspection
   const idle: PlayerCommand = {
     moveX: 0,
     moveZ: 0,
@@ -74,9 +75,11 @@ function main() {
     () => null,
   );
   if (map.props)
-    loadProps(renderer.scene, map.props).catch((err) => console.error('Failed to load props', err));
+    loadProps(renderer.scene, map.props, renderer.castShadow).catch((err) =>
+      console.error('Failed to load props', err),
+    );
   world.creatures.forEach((c, i) =>
-    loadCreature(renderer.scene, CREATURES[c.kind]).then(
+    loadCreature(renderer.scene, CREATURES[c.kind], renderer.castShadow).then(
       (v) => (views[i] = v),
       (err) => console.error(`Failed to load ${c.kind}`, err),
     ),

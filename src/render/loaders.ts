@@ -7,4 +7,10 @@ import meshoptDecoderUrl from '../../node_modules/meshoptimizer/meshopt_decoder.
 MeshoptCompression.Configuration = { decoder: { url: meshoptDecoderUrl } };
 // shortcut: KTX2 textures use Babylon's default decoder from cdn.babylonjs.com; self-host (KhronosTextureContainer2.URLConfig) before release.
 
-export { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader';
+import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader';
+import type { Scene } from '@babylonjs/core/scene';
+import { track } from '../core/loading';
+
+/** Loads a glTF into an AssetContainer and counts it toward the loading screen. */
+export const loadContainer = (url: string, scene: Scene) =>
+  track(LoadAssetContainerAsync(url, scene));

@@ -7,7 +7,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import { WEAPONS } from '../config/weapons';
 import type { SpearState } from '../sim/spear';
 import type { Projectile } from '../sim/world';
-import { LoadAssetContainerAsync } from './loaders';
+import { loadContainer } from './loaders';
 import spearUrl from '../assets/weapons/wpn_spear.glb?url';
 import armsUrl from '../assets/characters/chr_fp_arms.glb?url';
 
@@ -24,7 +24,7 @@ function model(
   setup: (m: AbstractMesh) => void = () => {},
 ) {
   const root = new TransformNode(name, scene);
-  if (!models.has(url)) models.set(url, LoadAssetContainerAsync(url, scene));
+  if (!models.has(url)) models.set(url, loadContainer(url, scene));
   models
     .get(url)!
     .then((c) => {

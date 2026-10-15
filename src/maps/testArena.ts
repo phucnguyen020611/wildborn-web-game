@@ -42,6 +42,18 @@ function mulberry32(seed: number) {
   };
 }
 
+/** Collision box for a placed prop, or null if it is walk-through. The offset turns with the prop. */
+function colliderFor(p: Prop): Box | null {
+  const c = (PROPS[p.id] as PropConfig).collider;
+  if (!c) return null;
+  const ox = (c.cx ?? 0) * p.scale;
+  const oz = (c.cz ?? 0) * p.scale;
+  // Same convention as headings: rotating +z toward +x.
+  const x = p.x + ox * Math.cos(p.rot) + oz * Math.sin(p.rot);
+  const z = p.z - ox * Math.sin(p.rot) + oz * Math.cos(p.rot);
+  return { x, z, w: c.w * p.scale, d: c.d * p.scale, h: c.h * p.scale, hidden: true };
+}
+
 /** Solid props (trees, rocks) on an outer ring clear of the patrol route; walk-through plants anywhere. */
 function scatter(boxes: Box[], spawn: { x: number; z: number }, seed: number) {
   const rand = mulberry32(seed);
@@ -61,38 +73,43 @@ function scatter(boxes: Box[], spawn: { x: number; z: number }, seed: number) {
       const z = Math.cos(a) * r;
       if (!clear(x, z, gap) || Math.hypot(x - spawn.x, z - spawn.z) < 4) continue; // keep the spawn view open
       const id = pick(ids);
-      const scale = 0.8 + rand() * 0.4;
+      const scale = ((PROPS[id] as PropConfig).scale ?? 1) * (0.8 + rand() * 0.4);
       props.push({ id, x, z, rot: rand() * Math.PI * 2, scale });
-      const c = (PROPS[id] as PropConfig).collider;
-      if (c) solids.push({ x, z, w: c.w * scale, d: c.d * scale, h: c.h * scale, hidden: true });
+      const box = colliderFor(props[props.length - 1]);
+      if (box) solids.push(box);
       placed++;
     }
   };
 
   place(['env_tree_common_1', 'env_tree_pine_1', 'env_tree_dead_1'], 45, 24, 29, 1.5);
-  place(['env_rock_medium_1', 'env_rock_medium_2'], 10, 23, 29, 1);
+  place(['env_rock_medium_1', 'env_rock_medium_2', 'env_rock_medium_3'], 10, 23, 29, 1);
   place(['env_bush_flowers', 'env_fern_1'], 40, 3, 29, 0.5);
   place(['env_grass_tall'], 120, 2, 29, 0.2);
+  place(['env_flowers_1', 'env_flowers_2'], 40, 2, 29, 0.3);
+  place(['env_clover'], 50, 2, 29, 0.2);
+  place(['env_mushroom'], 15, 18, 28, 0.2); // near the tree line
+  place(['env_pebble_1', 'env_pebble_2'], 30, 2, 29, 0.2);
   return { props, solids };
 }
 
-const blockout: Box[] = [
-  { x: 0, z: 0, w: 4, d: 4, h: 3 },
-  { x: -8, z: 6, w: 2, d: 6, h: 1.5 },
-  { x: 9, z: 4, w: 3, d: 3, h: 5 },
-  { x: -12, z: -8, w: 6, d: 1, h: 2 },
-  { x: 14, z: -10, w: 1.5, d: 1.5, h: 4 },
-  { x: 4, z: 14, w: 8, d: 2, h: 2.5 },
-  { x: -16, z: 16, w: 3, d: 3, h: 6 },
-  { x: 18, z: 18, w: 2, d: 2, h: 1 },
+// Hand-placed boulders: cover between the spawn and the mammoth's clearing, kept off both patrol routes.
+const boulders: Prop[] = [
+  { id: 'env_rock_medium_1', x: 0, z: 0, rot: 0.6, scale: 2.5 },
+  { id: 'env_rock_medium_2', x: -11, z: -6, rot: 2.1, scale: 1.8 },
+  { id: 'env_rock_medium_3', x: 7, z: -6, rot: 4.0, scale: 2 },
+  { id: 'env_rock_medium_2', x: -15, z: 12, rot: 1.2, scale: 2.6 },
+  { id: 'env_rock_medium_1', x: 17, z: 18, rot: 3.3, scale: 2.2 },
+  { id: 'env_rock_medium_3', x: -20, z: -16, rot: 5.1, scale: 1.6 },
+  { id: 'env_rock_medium_1', x: 19, z: -18, rot: 0.2, scale: 1.5 },
 ];
+const colliders = boulders.map(colliderFor).filter((b) => b !== null);
 const spawn = { x: 0, z: -20 };
-const { props, solids } = scatter(blockout, spawn, 1);
+const { props, solids } = scatter(colliders, spawn, 1);
 
 export const testArena: MapData = {
   size: 60,
   spawn,
-  boxes: [...blockout, ...solids],
+  boxes: [...colliders, ...solids],
   creatures: [
     {
       kind: 'fox',
@@ -114,5 +131,5 @@ export const testArena: MapData = {
       ],
     },
   ],
-  props,
+  props: [...boulders, ...props],
 };

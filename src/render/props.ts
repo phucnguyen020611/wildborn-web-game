@@ -1,8 +1,10 @@
-import { LoadAssetContainerAsync } from './loaders';
+import { loadContainer } from './loaders';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Scene } from '@babylonjs/core/scene';
 import type { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import type { Prop } from '../maps/testArena';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
+import { PROPS, type PropConfig } from '../config/props';
 
 const urls = import.meta.glob<string>('../assets/environment/*.glb', {
   query: '?url',
@@ -16,12 +18,14 @@ const urlFor = (id: string) => {
 };
 
 /** Loads each model once, then places GPU instances (one draw call per mesh/material, not per prop). */
-export async function loadProps(scene: Scene, props: Prop[]) {
+export async function loadProps(
+  scene: Scene,
+  props: Prop[],
+  castShadow: (m: AbstractMesh) => void,
+) {
   const ids = [...new Set(props.map((p) => p.id))];
   const containers = new Map(
-    await Promise.all(
-      ids.map(async (id) => [id, await LoadAssetContainerAsync(urlFor(id), scene)] as const),
-    ),
+    await Promise.all(ids.map(async (id) => [id, await loadContainer(urlFor(id), scene)] as const)),
   );
   // Quaternius stores wind/AO masks in vertex colors for its own shader; as plain tint they turn plants red/black.
   for (const c of containers.values()) for (const m of c.meshes) m.useVertexColors = false;
@@ -39,9 +43,11 @@ export async function loadProps(scene: Scene, props: Prop[]) {
     node.rotation.y = p.rot;
     node.scaling.setAll(p.scale);
     rootNodes.forEach((r) => (r.parent = node));
+    const casts = (PROPS[p.id] as PropConfig).castsShadow;
     node.getChildMeshes().forEach((m) => {
       m.isPickable = false;
       m.freezeWorldMatrix();
+      if (casts) castShadow(m);
     });
   }
 }
