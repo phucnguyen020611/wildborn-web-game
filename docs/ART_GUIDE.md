@@ -7,18 +7,26 @@ Phong cách đã chốt: **stylized / semi-realistic** (spec mục 7.2). Tài li
 - **Môi trường:** Quaternius — Stylized Nature MegaKit (CC0). Bản gốc nằm ở `WILDBORN/Assets/stylized-nature-megakit/`, chỉ copy model cần dùng vào `art-source/`.
 - Asset từ nguồn khác phải đặt cạnh MegaKit kiểm tra trước: hình khối, độ bão hòa và mật độ chi tiết phải khớp.
 
-## Bảng màu (tạm thời)
+## Bảng màu
 
 | Vai trò | Màu | Dùng ở |
 |---|---|---|
-| Đất / cỏ nền | `#546638` | Mặt đất (`src/render/scene.ts`) |
-| Đá blockout | `#736657` | Khối thử nghiệm |
-| Trời / sương | `#8C9E94` | Clear color + fog |
-| Ánh sáng phản từ đất | `#596147` | `groundColor` của đèn bán cầu |
+| Trời — đỉnh | `#5F97C4` | Vòm trời (`src/render/sky.ts`) |
+| Trời — gần chân trời | `#A9C6D8` | Vòm trời |
+| Chân trời / sương | `#C7D6C7` | Vòm trời, clear color, fog (EXP2, mật độ 0,014) |
+| Mặt đất | `#5C733B` | Ground |
+| Nắng | `#FFF0D1` (cường độ 1,25), chếch thấp | Directional light, đổ bóng |
+| Ánh trời | `#E0EDFF` (cường độ 0,65) | Hemispheric light |
+| Ánh phản từ đất | `#596147` | `groundColor` của hemispheric light |
 | UI — xương (chữ) | `#F2EBDD` | `--text` |
-| UI — than hồng (nhấn) | `#D97706` | `--accent`, nút chính |
+| UI — than hồng (nhấn) | `#D97706` | `--accent`, nút chính, thanh tải |
 
-Sẽ tinh chỉnh khi có ánh sáng, bầu trời và hậu kỳ thật. Hiện cảnh còn hơi xám so với ảnh preview của MegaKit.
+Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời thay vì bị cắt cụt.
+
+## Ánh sáng và bóng
+
+- Một nguồn sáng đổ bóng duy nhất (mặt trời), shadow map 2048, lọc PCF. Mức chất lượng Thấp tắt bóng.
+- Chỉ **thú** và **tảng đá** đổ bóng (`castsShadow` trong `src/config/props.ts`). Cây và cỏ không đổ bóng, vì mỗi vật đổ bóng phải vẽ lại thêm một lần vào shadow map.
 
 ## Quy tắc kỹ thuật
 
@@ -26,6 +34,8 @@ Sẽ tinh chỉnh khi có ánh sáng, bầu trời và hậu kỳ thật. Hiện
 - **Texture:** tối đa 1024² mặc định (pipeline tự giới hạn). KTX2: ETC1S cho màu, UASTC cho normal map.
 - **Vật liệu:** PBR, `metallic = 0`, `roughness` cao (~1). Không dùng vật liệu bóng kiểu kim loại cho đồ tự nhiên.
 - **Ngân sách gợi ý:** cây ≤ 20k đỉnh, đá ≤ 2k, cỏ/cây bụi ≤ 3k; con số thực tế xem `PERFORMANCE_TESTS.md`.
+- **Kích thước cây cỏ MegaKit:** một số model to quá cỡ (cụm hoa cao 2–2,4 m, cỏ cao 1,8 m), nên đặt `scale` gốc trong `src/config/props.ts`.
+- **Vùng va chạm của đá:** model đá MegaKit lệch tâm so với gốc tọa độ (tới 0,85 m), nên `collider` có `cx`/`cz` đo từ bounding box; độ lệch tự xoay theo góc của tảng đá.
 
 ## Lưu ý riêng với Quaternius MegaKit
 

@@ -79,3 +79,17 @@ Tải thêm 4 KB nhưng bộ nhớ GPU giảm khoảng 8 lần. Bộ giải mã 
 | Lỗi tải | 0 (12/12 model trả 200) | — |
 
 Menu hiện trước khi model tải xong, nhưng trong lúc đó chưa có gì báo đang tải. Đây là lý do nên làm màn hình tải có thanh tiến trình (spec 11.1). GitHub Pages chỉ cache khoảng 10 phút (spec 11.4), nên phát hành thật nên dùng CDN cho phép chỉnh header cache.
+
+## 2026-10-15 — Môi trường cho boss: tảng đá, bóng đổ, bầu trời
+
+**Thay đổi:** bỏ khối xám, thêm 7 tảng đá lớn đổ bóng, shadow map 2048 (PCF), vòm trời gradient, thêm khoảng 140 cây cỏ nhỏ (hoa, nấm, cỏ ba lá, sỏi). Tổng 357 prop.
+**Đo bằng:** `?bench`, browser pane Chromium, Apple M4, 1024×768.
+
+| Chỉ số | Kết quả | Trước đó |
+|---|---|---|
+| Frame time trung bình | 10,3 ms* | 8,34 ms |
+| p95 / p99 | 9,4 / 16,9 ms | 9,0 / 9,3 ms |
+| Draw call (lúc chơi) | ~38 | ~21–31 |
+| Model + âm thanh | 7,3 MB | ~6 MB |
+
+\*Có một khung hình kéo dài khoảng 1 giây (max 1.008 ms), nhiều khả năng do pane bị ẩn thoáng qua hoặc shader biên dịch muộn; nó kéo số trung bình lên. Lần chạy lại không hoàn tất vì pane bị ẩn. p99 tăng lên khoảng 17 ms, có thể do shadow pass. Cần đo lại trên Chrome thật, và nếu p99 vẫn cao thì kiểm tra shadow map, ví dụ hạ xuống 1024 cho mức Vừa.

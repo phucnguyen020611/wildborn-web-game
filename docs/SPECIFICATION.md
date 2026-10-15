@@ -625,7 +625,7 @@ Dùng blockout, hình khối đơn giản hoặc asset tạm thời để thử 
 - [x] Một khu vực nhỏ có cây, đá và vật cản; có thể bắt đầu bằng blockout.
 - [x] Một vòng chơi hoàn chỉnh từ lúc bắt đầu đến thắng/thua.
 - [x] Pipeline asset chạy bằng một lệnh; asset có hash, nén Meshopt/Draco và KTX2.
-- [ ] Tải theo giai đoạn có thanh tiến trình; giải phóng tài nguyên khi thoát trận.
+- [ ] Tải theo giai đoạn có thanh tiến trình; giải phóng tài nguyên khi thoát trận. *(đã có thanh tiến trình và khóa nút Chơi tới khi tải xong; chưa chia giai đoạn, chưa giải phóng tài nguyên vì mới có một map)*
 - [x] Preset đồ họa Low/Medium/High và giới hạn `devicePixelRatio`. *(hiện chỉ đổi độ phân giải render; bóng/foliage/hậu kỳ thêm khi có)*
 - [ ] Đo thời gian tải, FPS/frame time và bộ nhớ trên máy và trình duyệt tham chiếu; ghi vào `PERFORMANCE_TESTS.md`.
 - [x] Ghi giấy phép, nguồn tải, định dạng gốc và các bước chuyển đổi của từng asset vào `ASSET_REGISTER.md`.
