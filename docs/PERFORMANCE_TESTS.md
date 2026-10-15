@@ -66,3 +66,16 @@ Tải thêm 4 KB nhưng bộ nhớ GPU giảm khoảng 8 lần. Bộ giải mã 
 - **Instancing là bắt buộc:** Babylon mặc định clone (`doNotInstantiate: true`). Bật instancing giảm draw call ~16 lần.
 - **Texture là phần nặng nhất:** 3 file cây chiếm 3,9/4,7 MB, phần lớn do normal map vỏ cây UASTC. Hướng giảm tiếp: dùng chung một file texture cho các biến thể cây, hoặc bỏ normal map cho cây ở xa.
 - **Giới hạn của số đo:** trên M4 mọi thứ chạm trần vsync nên chưa biết còn dư bao nhiêu. Cần chạy `?bench` trên máy tầm trung.
+
+## 2026-10-15 — Bản deploy thật trên GitHub Pages
+
+**URL:** https://phucnguyen020611.github.io/wildborn-web-game/ (commit `d50c311`), browser pane Chromium, mạng thật, chưa có cache.
+
+| Chỉ số | Kết quả | Ngân sách |
+|---|---|---|
+| Request | 99 | — |
+| Dung lượng truyền tải | ~6,3 MB | 15–30 MB |
+| Thời gian đến khi tải xong toàn bộ asset | ~12,8 s | — |
+| Lỗi tải | 0 (12/12 model trả 200) | — |
+
+Menu hiện trước khi model tải xong, nhưng trong lúc đó chưa có gì báo đang tải. Đây là lý do nên làm màn hình tải có thanh tiến trình (spec 11.1). GitHub Pages chỉ cache khoảng 10 phút (spec 11.4), nên phát hành thật nên dùng CDN cho phép chỉnh header cache.

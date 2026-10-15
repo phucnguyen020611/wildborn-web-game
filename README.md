@@ -2,6 +2,8 @@
 
 Game FPS tiền sử chạy trên trình duyệt. Đặc tả: [docs/SPECIFICATION.md](docs/SPECIFICATION.md).
 
+**Chơi thử:** https://phucnguyen020611.github.io/wildborn-web-game/ — tự deploy mỗi khi push lên `main` (`.github/workflows/deploy.yml`: type-check, lint, test, build, rồi GitHub Pages).
+
 ## Chạy
 
 ```bash
