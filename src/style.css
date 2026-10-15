@@ -175,6 +175,23 @@ p {
   background: #ef4444;
 }
 
+/* ---------- Loading ---------- */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.loading .bar-fill {
+  background: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: progress;
+}
+
 /* ---------- Settings ---------- */
 
 .panel-wide {

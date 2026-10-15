@@ -37,5 +37,6 @@
   "settings.sfx": "Hiệu ứng",
   "settings.ambience": "Môi trường",
   "settings.back": "Quay lại",
-  "creature.mammoth": "Voi ma mút"
+  "creature.mammoth": "Voi ma mút",
+  "loading.progress": "Đang tải {percent}%"
 }

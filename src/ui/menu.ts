@@ -1,5 +1,6 @@
 import { getLang, setLang, t, type Lang } from '../i18n';
 import { bindSettingsForm } from './settingsForm';
+import { onLoadProgress } from '../core/loading';
 
 export type Screen = 'menu' | 'pause' | 'settings' | 'end' | 'error' | null;
 
@@ -59,6 +60,21 @@ export function createMenus(onPlay: () => void, onMenu: () => void) {
     }),
   );
   syncLang();
+
+  // Loading screen: the main menu's Play stays disabled until every model and sound has settled.
+  const loading = screens.menu.querySelector<HTMLElement>('.loading')!;
+  const loadingFill = loading.querySelector<HTMLElement>('.bar-fill')!;
+  const loadingText = loading.querySelector<HTMLElement>('.loading-text')!;
+  const playButton = screens.menu.querySelector<HTMLButtonElement>('[data-action="play"]')!;
+  onLoadProgress(({ done, total }) => {
+    const ready = total > 0 && done === total;
+    const percent = total ? Math.round((done / total) * 100) : 0;
+    loadingFill.style.transform = `scaleX(${percent / 100})`;
+    loadingText.textContent = t('loading.progress', { percent });
+    loading.hidden = ready;
+    playButton.disabled = !ready;
+    if (ready && current === 'menu') playButton.focus();
+  });
 
   function show(screen: Screen) {
     for (const [name, el] of Object.entries(screens)) el.hidden = name !== screen;

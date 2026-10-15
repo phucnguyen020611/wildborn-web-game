@@ -37,5 +37,6 @@
   "settings.sfx": "Effects",
   "settings.ambience": "Ambience",
   "settings.back": "Back",
-  "creature.mammoth": "Woolly mammoth"
+  "creature.mammoth": "Woolly mammoth",
+  "loading.progress": "Loading {percent}%"
 }

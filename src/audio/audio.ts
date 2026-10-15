@@ -1,4 +1,5 @@
 import { onSettings } from '../settings/settings';
+import { track } from '../core/loading';
 
 const urls = import.meta.glob<string>('../assets/audio/*.m4a', {
   query: '?url',
@@ -33,11 +34,12 @@ export function createAudio() {
 
   const buffers = new Map<string, AudioBuffer>();
   for (const [path, url] of Object.entries(urls)) {
-    fetch(url)
-      .then((r) => r.arrayBuffer())
-      .then((data) => ctx.decodeAudioData(data))
-      .then((buf) => buffers.set(nameOf(path), buf))
-      .catch((err) => console.error(`Failed to load sound ${path}`, err));
+    track(
+      fetch(url)
+        .then((r) => r.arrayBuffer())
+        .then((data) => ctx.decodeAudioData(data))
+        .then((buf) => buffers.set(nameOf(path), buf)),
+    ).catch((err) => console.error(`Failed to load sound ${path}`, err));
   }
 
   let unlocked = false;
