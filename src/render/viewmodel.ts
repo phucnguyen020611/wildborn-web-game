@@ -69,9 +69,11 @@ export function createSpearViewmodel(
       else if (s.phase === 'active') push = Math.min(1, s.t / 0.04);
       else if (s.phase === 'recover') push = 1 - smooth(Math.min(1, s.t / cfg.recover));
       root.position.set(
-        REST.x - 0.12 * Math.max(0, push),
-        REST.y + 0.06 * push,
-        REST.z + 0.3 * push,
+        // Short, and dipping down-right: a longer, inward or rising push swings the elbow (so close to
+        // the eye it fills the corner) into view.
+        REST.x + 0.04 * Math.max(0, push),
+        REST.y - 0.06 * Math.max(0, push),
+        REST.z + 0.16 * push,
       );
     }
     root.position.x += motion.vmX;

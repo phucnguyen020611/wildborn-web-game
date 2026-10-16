@@ -19,7 +19,7 @@ EYE = Vector((0, 0, 1.19))  # rig camera position (rig units): looks along +Y, u
 
 # Spear viewmodel rest transform in game camera space (Babylon: x right, y up, z forward, metres).
 REST_POS = Vector((0.22, -0.19, 0.45))
-SHOULDER = Vector((0.3, -0.38, -0.5))  # camera space, behind the eye even when the thrust pushes 0.3 m forward
+SHOULDER = Vector((0.3, -0.62, -0.3))  # camera space: steeply down and behind the eye, so it leaves the frame fast
 PITCH = math.pi / 2 - 0.12  # rotation.x
 YAW = -0.06  # rotation.y
 
@@ -172,16 +172,17 @@ back = Vector((-b.x, -b.z, b.y)) - c  # camera space -> spear-local Blender axes
 new = bmesh.ops.extrude_edge_only(bm, edges=list(cut))["geom"]
 new_verts = [g for g in new if isinstance(g, bmesh.types.BMVert)]
 for v in new_verts:
-    v.co = c + (v.co - c) * 0.9 + back  # slight taper toward the shoulder
+    v.co = c + (v.co - c) * 0.75 + back  # taper toward the shoulder
 cap = bmesh.ops.contextual_create(bm, geom=[g for g in new if isinstance(g, bmesh.types.BMEdge)])
 added = [g for g in new if isinstance(g, bmesh.types.BMFace)] + cap["faces"]
 for f in added:
     f.material_index = 0
+    f.smooth = True
     for l in f.loops:  # reuse the cut's skin UVs so the extension samples skin, not a random texel
         if l.vert in old_uv:
             src = l.vert
         else:  # an extruded vertex: undo the move to find the cut vertex it came from
-            home = c + (l.vert.co - back - c) / 0.9
+            home = c + (l.vert.co - back - c) / 0.75
             src = min(old_uv, key=lambda o: (o.co - home).length)
         if old_uv[src] is not None:
             l[uv].uv = old_uv[src]
