@@ -1,15 +1,17 @@
 import type { CreatureConfig } from '../config/creatures';
-import type { MapData } from '../maps/testArena';
+import type { MapData } from '../maps/types';
 
 type XZ = { x: number; z: number };
 const ATTACK_CONE = (70 * Math.PI) / 180; // an attack only lands on a player roughly in front
 import { clampToArena, pushOutOfBox } from './collision';
+import { groundAt } from './terrain';
 
 /** `attack` = telegraphed wind-up before a bite; it stands still, so the player can read it and step away. */
 export type CreatureMode = 'idle' | 'walk' | 'flee' | 'chase' | 'attack' | 'dead';
 
 export interface CreatureState {
   x: number;
+  y: number; // ground height under it
   z: number;
   heading: number; // same convention as player yaw: 0 faces +z
   speed: number;
@@ -26,6 +28,7 @@ export function createCreature(waypoints: XZ[], cfg: CreatureConfig): CreatureSt
   const start = waypoints[0] ?? { x: 0, z: 0 };
   return {
     x: start.x,
+    y: 0, // set by the first step
     z: start.z,
     heading: 0,
     speed: 0,
@@ -139,5 +142,6 @@ export function stepCreature(
   // shortcut: creature ignores box heights and treats all boxes as walls; fine for ground animals.
   for (const b of map.boxes) pushOutOfBox(c, cfg.radius, b);
   clampToArena(c, cfg.radius, map);
+  c.y = groundAt(map, c.x, c.z);
   return damage;
 }

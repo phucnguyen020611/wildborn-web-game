@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createWorld, stepWorld, type World } from './world';
 import type { PlayerCommand } from './player';
-import type { MapData } from '../maps/testArena';
+import type { MapData } from '../maps/types';
 import { CREATURES } from '../config/creatures';
 import { WEAPONS } from '../config/weapons';
 import { PLAYER } from '../config/player';

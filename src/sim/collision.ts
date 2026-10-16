@@ -1,4 +1,4 @@
-import type { Box, MapData } from '../maps/testArena';
+import type { Box, MapData } from '../maps/types';
 
 interface XZ {
   x: number;

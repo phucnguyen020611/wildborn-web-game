@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createPlayer, stepPlayer, type PlayerCommand } from './player';
-import type { MapData } from '../maps/testArena';
+import type { MapData } from '../maps/types';
 import { PLAYER } from '../config/player';
+import { bakeTerrain } from './terrain';
 
 const DT = 1 / 60;
 const idle: PlayerCommand = {
@@ -82,5 +83,20 @@ describe('stepPlayer', () => {
 
     for (let i = 0; i < 120; i++) stepPlayer(p, { ...idle, moveZ: 1 }, ledge, DT);
     expect(p.y).toBe(0);
+  });
+
+  it('follows terrain up and down a slope, staying grounded (able to jump)', () => {
+    const hill: MapData = { ...empty, terrain: bakeTerrain(100, 50, (_x, z) => Math.abs(z) * 0.3) };
+    const p = createPlayer(hill);
+    for (let i = 0; i < 120; i++) {
+      stepPlayer(p, { ...idle, moveZ: 1 }, hill, DT); // uphill
+      expect(p.onGround).toBe(true);
+    }
+    expect(p.y).toBeCloseTo(p.z * 0.3, 1);
+    for (let i = 0; i < 240; i++) {
+      stepPlayer(p, { ...idle, moveZ: -1 }, hill, DT); // over the crest at z = 0 and down the other side
+      expect(p.onGround).toBe(true);
+    }
+    expect(p.y).toBeCloseTo(-p.z * 0.3, 1);
   });
 });

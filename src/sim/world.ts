@@ -1,8 +1,9 @@
 import { PLAYER } from '../config/player';
 import { CREATURES, type CreatureKind } from '../config/creatures';
 import { WEAPONS } from '../config/weapons';
-import type { MapData } from '../maps/testArena';
+import type { MapData } from '../maps/types';
 import { overlapsBox } from './collision';
+import { boxTop, groundAt } from './terrain';
 import { createCreature, damageCreature, stepCreature, type CreatureState } from './creature';
 import { segmentDistance, type Vec3 } from './geometry';
 import { createPlayer, stepPlayer, type PlayerCommand, type PlayerState } from './player';
@@ -47,10 +48,11 @@ export interface World {
 }
 
 export function createWorld(map: MapData): World {
-  const creatures = map.creatures.map((sp) => ({
-    kind: sp.kind,
-    state: createCreature(sp.waypoints, CREATURES[sp.kind]),
-  }));
+  const creatures = map.creatures.map((sp) => {
+    const state = createCreature(sp.waypoints, CREATURES[sp.kind]);
+    state.y = groundAt(map, state.x, state.z);
+    return { kind: sp.kind, state };
+  });
   return {
     player: createPlayer(map),
     spear: createSpear(),
@@ -166,18 +168,18 @@ function stepProjectile(w: World, s: Projectile, map: MapData, dt: number) {
   const blocked =
     Math.abs(s.x) > half ||
     Math.abs(s.z) > half ||
-    map.boxes.some((b) => s.y < b.h && overlapsBox(s, 0.05, b));
+    map.boxes.some((b) => s.y < boxTop(b) && overlapsBox(s, 0.05, b));
   if (blocked) land(w, s, prev, map);
-  else if (s.y <= 0) land(w, s, s, map);
+  else if (s.y <= groundAt(map, s.x, s.z)) land(w, s, s, map);
 }
 
 function land(w: World, s: Projectile, at: Vec3, map: MapData) {
   const half = map.size / 2 - 0.5; // keep it inside the arena so it can be picked up
   s.x = Math.max(-half, Math.min(half, at.x));
   s.z = Math.max(-half, Math.min(half, at.z));
-  s.y = 0;
+  s.y = groundAt(map, s.x, s.z);
   s.flying = false;
-  w.events.push({ type: 'stick', at: { x: s.x, y: 0, z: s.z } });
+  w.events.push({ type: 'stick', at: { x: s.x, y: s.y, z: s.z } });
 }
 
 function hit(w: World, i: number, damage: number, at: Vec3) {
@@ -209,8 +211,8 @@ function hitsCreature(a: Vec3, b: Vec3, { kind, state: c }: Creature) {
   const hb = CREATURES[kind].hitbox;
   const hx = (Math.sin(c.heading) * hb.length) / 2;
   const hz = (Math.cos(c.heading) * hb.length) / 2;
-  const front = { x: c.x + hx, y: hb.height, z: c.z + hz };
-  const back = { x: c.x - hx, y: hb.height, z: c.z - hz };
+  const front = { x: c.x + hx, y: c.y + hb.height, z: c.z + hz };
+  const back = { x: c.x - hx, y: c.y + hb.height, z: c.z - hz };
   return segmentDistance(a, b, back, front) < hb.radius;
 }
 

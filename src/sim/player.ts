@@ -1,6 +1,7 @@
 import { PLAYER } from '../config/player';
-import type { MapData } from '../maps/testArena';
+import type { MapData } from '../maps/types';
 import { clampToArena, overlapsBox, pushOutOfBox } from './collision';
+import { boxTop, groundAt } from './terrain';
 
 /** One simulation step of player intent. Absolute yaw (radians) so it can later be sent to a server as-is. */
 export interface PlayerCommand {
@@ -14,7 +15,7 @@ export interface PlayerCommand {
   throw: boolean; // throw pressed since the last step
 }
 
-/** Feet position; y = 0 is the ground. */
+/** Feet position (world y, the terrain is not flat). */
 export interface PlayerState {
   x: number;
   y: number;
@@ -26,7 +27,15 @@ export interface PlayerState {
 }
 
 export function createPlayer(map: MapData): PlayerState {
-  return { x: map.spawn.x, y: 0, z: map.spawn.z, vx: 0, vy: 0, vz: 0, onGround: true };
+  return {
+    x: map.spawn.x,
+    y: groundAt(map, map.spawn.x, map.spawn.z),
+    z: map.spawn.z,
+    vx: 0,
+    vy: 0,
+    vz: 0,
+    onGround: true,
+  };
 }
 
 /** Mutates `p` by one fixed step. No rendering or DOM access here. */
@@ -58,12 +67,14 @@ export function stepPlayer(p: PlayerState, cmd: PlayerCommand, map: MapData, dt:
 
   const r = PLAYER.radius;
   // Boxes taller than a step are walls; lower ones (or ones we're already above) are floor.
-  for (const b of map.boxes) if (b.h > p.y + PLAYER.stepHeight) pushOutOfBox(p, r, b);
+  for (const b of map.boxes) if (boxTop(b) > p.y + PLAYER.stepHeight) pushOutOfBox(p, r, b);
   clampToArena(p, r, map);
 
-  let floor = 0;
-  for (const b of map.boxes) if (b.h > floor && overlapsBox(p, r, b)) floor = b.h;
-  if (p.y <= floor) {
+  let floor = groundAt(map, p.x, p.z);
+  for (const b of map.boxes) if (boxTop(b) > floor && overlapsBox(p, r, b)) floor = boxTop(b);
+  // Walking downhill: stick to the slope instead of taking tiny falls (which would block jumping).
+  const snap = p.onGround && p.vy <= 0 && p.y - floor < PLAYER.stepHeight;
+  if (p.y <= floor || snap) {
     p.y = floor;
     p.vy = 0;
     p.onGround = true;

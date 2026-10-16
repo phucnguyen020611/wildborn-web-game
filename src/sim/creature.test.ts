@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCreature, stepCreature } from './creature';
 import { CREATURES } from '../config/creatures';
-import type { MapData } from '../maps/testArena';
+import type { MapData } from '../maps/types';
 
 const DT = 1 / 60;
 const cfg = CREATURES.fox;
