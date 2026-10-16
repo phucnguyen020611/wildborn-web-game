@@ -5,7 +5,6 @@ import { Camera } from '@babylonjs/core/Cameras/camera';
 import { onSettings, type Quality } from '../settings/settings';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
-import { CreateGround } from '@babylonjs/core/Meshes/Builders/groundBuilder';
 import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
@@ -14,8 +13,9 @@ import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator'
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { createSky } from './sky';
+import { createGround } from './terrain';
 import { PLAYER } from '../config/player';
-import type { MapData } from '../maps/testArena';
+import type { MapData } from '../maps/types';
 import type { PlayerState } from '../sim/player';
 import { createSpearViewmodel, createThrownSpear } from './viewmodel';
 
@@ -66,12 +66,7 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
   shadows.normalBias = 0.02;
   const castShadow = (m: AbstractMesh) => shadows.addShadowCaster(m, false);
 
-  const groundMat = new StandardMaterial('ground', scene);
-  groundMat.diffuseColor = new Color3(0.36, 0.45, 0.23);
-  groundMat.specularColor = Color3.Black();
-  const ground = CreateGround('ground', { width: map.size, height: map.size }, scene);
-  ground.material = groundMat;
-  ground.receiveShadows = true;
+  createGround(scene, map);
 
   const rockMat = new StandardMaterial('rock', scene);
   rockMat.diffuseColor = new Color3(0.45, 0.4, 0.34);
@@ -79,7 +74,7 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
   for (const b of map.boxes) {
     if (b.hidden) continue;
     const box = CreateBox('box', { width: b.w, depth: b.d, height: b.h }, scene);
-    box.position.set(b.x, b.h / 2, b.z);
+    box.position.set(b.x, (b.y ?? 0) + b.h / 2, b.z);
     box.material = rockMat;
     box.freezeWorldMatrix();
   }

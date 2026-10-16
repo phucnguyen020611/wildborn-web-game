@@ -76,7 +76,7 @@ export async function loadCreature(
       const rollOver = dead && !anims.dead;
       node.position.set(
         prev.x + (curr.x - prev.x) * alpha,
-        rollOver ? 0.12 : 0,
+        prev.y + (curr.y - prev.y) * alpha + (rollOver ? 0.12 : 0),
         prev.z + (curr.z - prev.z) * alpha,
       );
       node.rotation.set(0, curr.heading, rollOver ? Math.PI / 2 : 0); // models face +z (glTF front)

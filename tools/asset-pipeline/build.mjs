@@ -78,9 +78,17 @@ for (const file of walk(SRC)) {
   if (!fromBlender && !/\.(glb|gltf)$/i.test(file)) continue;
   const out = join(OUT, relative(SRC, file)).replace(/\.\w+$/, '.glb');
   mkdirSync(dirname(out), { recursive: true });
-  const input = fromBlender ? blenderExport(file) : file;
+  let input = fromBlender ? blenderExport(file) : file;
   // Quaternius exports vertex colors like 1.0002 (float rounding): harmless, so not fatal.
   run('validate', input, '--ignore', 'ACCESSOR_NON_CLAMPED');
+  const tmps = fromBlender ? [input] : [];
+  if (/environment/.test(file)) {
+    // Bark normal maps are most of the kit's size (UASTC); seen from walking height 512² looks the same.
+    // The pattern matches substrings, so '_Normal' would also catch the colour map 'Bark_NormalTree'.
+    const small = join(tmpdir(), `${basename(file)}.normals.glb`);
+    run('resize', input, small, '--pattern', 'Tree_Normal', '--width', '512', '--height', '512');
+    tmps.push((input = small));
+  }
   run(
     'optimize',
     input,
@@ -94,6 +102,6 @@ for (const file of walk(SRC)) {
     '--join-named',
     'false', // keep named nodes (attach points, hitboxes) separate
   );
-  if (fromBlender) rmSync(input);
+  tmps.forEach((t) => rmSync(t));
   console.log(`${file} (${kb(file)}) -> ${out} (${kb(out)})`);
 }
