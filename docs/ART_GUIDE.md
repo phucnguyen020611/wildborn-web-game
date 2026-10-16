@@ -54,7 +54,7 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 
 - Script trong `tools/blender/` sinh file `.blend` vào `art-source/`. Mở file `.blend` trong Blender để chỉnh tay; chỉ chạy lại script khi muốn làm lại từ đầu, vì chạy lại sẽ ghi đè các chỉnh sửa tay.
 - **Giáo** (`make_spear.py`): gốc tọa độ ở chỗ cầm, giáo nằm dọc trục +Z của Blender (tức +Y của glTF), mũi ở Z = 1,3.
-- **Tay** (`make_fp_arms.py`): được đặt sẵn trong khung tọa độ của giáo, nên trong game chỉ cần gắn làm con của giáo. Nếu đổi `REST` trong `src/render/viewmodel.ts` thì phải đổi `REST_POS` trong script và chạy lại.
+- **Tay** (`make_fp_arms.py`): được đặt sẵn trong khung tọa độ của giáo, nên trong game chỉ cần gắn làm con của giáo. Mesh gốc bị cắt ở cánh tay trên. Script kéo dài chỗ cắt về điểm `SHOULDER` nằm sau camera rồi bịt kín, nên khi đâm (tay lao lên 0,3 m) không lộ phần hở. Nếu đổi `REST` trong `src/render/viewmodel.ts` thì phải đổi `REST_POS` trong script và chạy lại.
 - **Ma mút** (`make_mammoth.py`): mặt trước hướng −Y trong Blender (+Z trong glTF), gốc tọa độ giữa 4 chân. Mỗi bộ phận gắn cứng vào một xương (không skin mềm). Thời gian báo đòn trong clip `Attack` (0,7 s) phải khớp `attackWindup` trong `src/config/creatures.ts`.
 
 ## Bộ kit môi trường
