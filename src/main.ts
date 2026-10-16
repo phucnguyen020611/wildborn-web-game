@@ -9,7 +9,7 @@ import { createDebugOverlay } from './debug/overlay';
 import { createBench } from './debug/bench';
 import { createWorld, stepWorld } from './sim/world';
 import type { PlayerCommand } from './sim/player';
-import { createHud } from './ui/hud';
+import { createHud, lowHealth } from './ui/hud';
 import { createAudio } from './audio/audio';
 import { loadCreature } from './render/creature';
 import { loadProps } from './render/props';
@@ -162,6 +162,7 @@ function main() {
     (alpha) => {
       world.creatures.forEach((c, i) => views[i]?.update(prev.creatures[i], c.state, alpha));
       hud.update(world);
+      audio.heartbeat(state === 'playing' ? lowHealth(world.playerHp) : 0);
       renderer.viewmodel.update(world.spear);
       renderer.thrownSpear.update(prev.thrown, world.thrown, alpha);
       if (bench?.running) {

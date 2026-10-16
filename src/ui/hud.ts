@@ -6,8 +6,12 @@ import { t } from '../i18n';
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const LOW_HP = 0.3;
 
+/** 0 above 30% health, rising to 1 at zero: drives the desaturation and the heartbeat. */
+export const lowHealth = (hp: number) => Math.max(0, 1 - hp / (PLAYER.hp * LOW_HP));
+
 /** In-game HUD. `update` runs every frame but only touches the DOM when a value changes. */
 export function createHud() {
+  const canvas = $('#game');
   const crosshair = $('.crosshair');
   const vignette = $('.hud-vignette');
   const target = $('.hud-target');
@@ -35,6 +39,8 @@ export function createHud() {
         const low = w.playerHp / PLAYER.hp <= LOW_HP;
         player.classList.toggle('low', low);
         vignette.classList.toggle('low', low);
+        const k = lowHealth(w.playerHp); // the world drains of colour as you near death
+        canvas.style.filter = k > 0 ? `saturate(${1 - 0.8 * k})` : '';
       }
       // The target bar appears once the fight starts, so it doesn't spoil the hunt.
       const { kind, state } = w.creatures[w.target];

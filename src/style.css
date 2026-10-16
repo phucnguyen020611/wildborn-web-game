@@ -373,6 +373,10 @@ p {
   opacity: 0.45;
 }
 
+#game {
+  transition: filter 400ms ease-out; /* low-health desaturation */
+}
+
 #debug {
   position: fixed;
   top: 8px;
@@ -395,7 +399,8 @@ p {
 @media (prefers-reduced-motion: reduce) {
   .btn,
   .bar-fill,
-  .hud-vignette {
+  .hud-vignette,
+  #game {
     transition: none;
   }
 }

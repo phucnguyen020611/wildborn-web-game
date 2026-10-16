@@ -84,8 +84,36 @@ export function createAudio() {
     ambienceSource.start();
   }
 
+  let nextBeat = 0;
+  /** One low thump, synthesized (no file): a sine dropping in pitch under a fast decay. */
+  function thump(at: number, gain: number) {
+    const osc = new OscillatorNode(ctx, { type: 'sine', frequency: 70 });
+    const env = new GainNode(ctx, { gain: 0 });
+    osc.frequency.exponentialRampToValueAtTime(38, at + 0.12);
+    env.gain.setValueAtTime(0, at);
+    env.gain.linearRampToValueAtTime(gain, at + 0.015);
+    env.gain.exponentialRampToValueAtTime(0.001, at + 0.16);
+    osc.connect(env).connect(sfx);
+    osc.start(at);
+    osc.stop(at + 0.2);
+  }
+
   return {
     play,
+    /** Called every frame with 0..1 (lowHealth): a heartbeat that gets louder and faster near death. */
+    heartbeat(level: number) {
+      if (!unlocked || level <= 0) {
+        nextBeat = 0;
+        return;
+      }
+      const now = ctx.currentTime;
+      if (nextBeat < now) nextBeat = now + 0.05;
+      if (nextBeat - now > 0.1) return; // schedule just ahead, so level changes apply to the next beat
+      const gain = 0.35 + 0.45 * level;
+      thump(nextBeat, gain); // lub
+      thump(nextBeat + 0.2, gain * 0.7); // dub
+      nextBeat += 1.1 - 0.5 * level;
+    },
     unlock() {
       unlocked = true;
       ctx.resume();
