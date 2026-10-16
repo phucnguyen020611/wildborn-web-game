@@ -15,6 +15,7 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { createSky } from './sky';
 import { daylight } from './daylight';
 import { createGround } from './terrain';
+import { createGrass } from './grass';
 import { PLAYER } from '../config/player';
 import type { MapData } from '../maps/types';
 import type { PlayerState } from '../sim/player';
@@ -73,6 +74,7 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
   const castShadow = (m: AbstractMesh) => shadows.addShadowCaster(m, false);
 
   createGround(scene, map, sky.reflection);
+  createGrass(scene, map, camera);
 
   const rockMat = new StandardMaterial('rock', scene);
   rockMat.diffuseColor = new Color3(0.45, 0.4, 0.34);

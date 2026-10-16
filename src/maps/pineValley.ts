@@ -149,7 +149,7 @@ const { props, solids } = scatter(
     },
     {
       ids: ['grass_tall', 'grass_short'],
-      count: 900,
+      count: 400, // taller clumps over the dense GPU grass (render/grass.ts)
       gap: 0.2,
       where: (x, z) => dry(x, z) && trail(x, z) > 1.2,
     },
