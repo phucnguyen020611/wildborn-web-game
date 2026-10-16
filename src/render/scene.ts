@@ -72,7 +72,7 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
   shadows.normalBias = 0.03;
   const castShadow = (m: AbstractMesh) => shadows.addShadowCaster(m, false);
 
-  createGround(scene, map);
+  createGround(scene, map, sky.reflection);
 
   const rockMat = new StandardMaterial('rock', scene);
   rockMat.diffuseColor = new Color3(0.45, 0.4, 0.34);
