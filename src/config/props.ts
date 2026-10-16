@@ -21,12 +21,18 @@ const far = 110; // trees: beyond this the fog has all but hidden them (exp2 fog
 const range = (name: string, n: number) => Array.from({ length: n }, (_, i) => `${name}_${i + 1}`);
 
 export const PROPS = {
-  tree_common: { nodes: range('CommonTree', 5), collider: trunk, drawDistance: far },
-  tree_pine: { nodes: range('Pine', 5), collider: trunk, drawDistance: far },
+  tree_common: {
+    nodes: range('CommonTree', 5),
+    collider: trunk,
+    drawDistance: far,
+    castsShadow: true,
+  },
+  tree_pine: { nodes: range('Pine', 5), collider: trunk, drawDistance: far, castsShadow: true },
   tree_dead: {
     nodes: range('DeadTree', 3),
     collider: { ...trunk, w: 0.8, d: 0.8 },
     drawDistance: far,
+    castsShadow: true,
   },
   // One id per rock: footprints ~80% of the model bounds, centres measured from the glTF bounding boxes.
   rock_1: {

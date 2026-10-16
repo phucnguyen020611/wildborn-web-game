@@ -37,4 +37,5 @@ export interface MapData {
   terrain?: Terrain; // flat ground at y = 0 when absent
   water?: number; // water surface height, if the map has any
   paths?: { x: number; z: number }[][]; // trodden trails (polylines), painted as dirt
+  time?: number; // hour of day 0-24 (default 10): sun position, light colour, fog
 }
