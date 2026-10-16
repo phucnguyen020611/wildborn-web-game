@@ -12,17 +12,13 @@ Phong cách đã chốt: **stylized / semi-realistic** (spec mục 7.2). Tài li
 
 | Vai trò | Màu | Dùng ở |
 |---|---|---|
-| Trời — đỉnh | `#5F97C4` | Vòm trời (`src/render/sky.ts`) |
-| Trời — gần chân trời | `#A9C6D8` | Vòm trời |
-| Chân trời / sương | `#C7D6C7` | Vòm trời, clear color, fog (EXP2, mật độ 0,014) |
-| Mặt đất — cỏ | `#5C733B` | Địa hình (`src/render/terrain.ts`) |
-| Mặt đất — cỏ khô | `#808045` | Mảng cỏ khô (theo noise) |
-| Mặt đất — lối mòn | `#735C3D` | Dọc `paths` của map |
-| Mặt đất — đá | `#70695E` | Sườn dốc hơn ~40–50° |
-| Mặt đất — bùn | `#4D4533` | Sát mép nước |
-| Nước | `#386166` (alpha 0,75) | Mặt suối/hồ |
-| Nắng | `#FFF0D1` (cường độ 1,25), chếch thấp | Directional light, đổ bóng |
-| Ánh trời | `#E0EDFF` (cường độ 0,65) | Hemispheric light |
+| Trời | Tính theo vị trí mặt trời (`SkyMaterial`) | `src/render/sky.ts` |
+| Chân trời / sương | Theo giờ, 10 giờ sáng ≈ `#C2D4DB` | Clear color, fog (EXP2, mật độ 0,014), `src/render/daylight.ts` |
+| Mặt đất | Texture ảnh (xem mục Địa hình) | `src/render/terrain.ts` |
+| Thảm cỏ — gốc → ngọn | `#213812` → `#8C9E4D` | `src/render/grass.ts` |
+| Nước | `#0D2421` (alpha 0,85) + phản chiếu | `src/render/water.ts` |
+| Nắng | Theo giờ, ban ngày `#FFF0D1` (cường độ 1,25) | Directional light, đổ bóng |
+| Ánh trời | Theo giờ, ban ngày `#E0EDFF` (cường độ 0,65) | Hemispheric light |
 | Ánh phản từ đất | `#596147` | `groundColor` của hemispheric light |
 | UI — xương (chữ) | `#F2EBDD` | `--text` |
 | UI — than hồng (nhấn) | `#D97706` | `--accent`, nút chính, thanh tải |
@@ -31,8 +27,9 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 
 ## Ánh sáng và bóng
 
-- Một nguồn sáng đổ bóng duy nhất (mặt trời), shadow map 2048, lọc PCF. Mức chất lượng Thấp tắt bóng.
-- Chỉ **thú** và **tảng đá** đổ bóng (`castsShadow` trong `src/config/props.ts`). Cây và cỏ không đổ bóng, vì mỗi vật đổ bóng phải vẽ lại thêm một lần vào shadow map.
+- **Giờ trong ngày** (`src/render/daylight.ts`): từ giờ (0–24) suy ra hướng mặt trời, màu và cường độ nắng, ánh trời, màu sương. Giá trị nội suy giữa các mốc theo độ cao mặt trời: đêm trăng, chạng vạng, hoàng hôn, giờ vàng, ban ngày, trưa. Ban đêm, mặt trăng (đối diện mặt trời) là nguồn đổ bóng. Map đặt giờ bằng `time`; `?time=` để xem thử.
+- **Bầu trời:** `SkyMaterial` (tán xạ Preetham) theo vị trí mặt trời. Bầu trời được vẽ một lần vào cube map 128px, dùng làm ánh sáng môi trường cho vật liệu PBR và phản chiếu nước ở mức Thấp.
+- **Bóng:** một nguồn sáng đổ bóng duy nhất, chia tầng (cascaded): Vừa 2 tầng, Cao 3 tầng, Thấp tắt; shadow map 2048, PCF, xa nhất 90 m. Cây, đá, thú và đồ trại đổ bóng; cỏ và hoa thì không.
 
 ## Quy tắc kỹ thuật
 
@@ -67,6 +64,10 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 
 ## Địa hình
 
+- **Texture mặt đất** (Poly Haven, CC0): cỏ `grass_ground`, đất rừng `forest_ground_04` (lối mòn, bùn ven nước), đá `rocky_terrain_02` (sườn dốc). `TerrainMaterial` trộn 3 lớp theo bản đồ trộn 512² sinh từ độ dốc, lối mòn và mép nước (`groundWeights` trong `src/render/terrain.ts`). Mỗi texture lặp 7 m; lặp nhỏ hơn thì ảnh chụp trông lấm tấm. Màu ETC1S 1024²; normal map UASTC 512².
+- **Thảm cỏ GPU** (`src/render/grass.ts`): bụi 5 ngọn cong, đậm ở gốc, sáng ở ngọn; tối đa 4 bụi/m², mật độ theo lớp cỏ của bản đồ trộn nhân với noise để thành từng mảng. Thin instance theo ô 16 m; ô chỉ được dựng và hiện khi trong tầm vẽ. Mỗi ô có geometry riêng, vì các clone dùng chung geometry bị WebGL báo lỗi "vertex buffer is not big enough" và không vẽ.
+- **Gió** (`src/render/wind.ts`): plugin vật liệu đẩy đỉnh theo bình phương độ cao trong model (cây cong từ gốc, cỏ lay từ chân). Cường độ theo vật liệu: cây ~0,002, cây chết ~0,001, cỏ/hoa/lá nhỏ 0,05, thảm cỏ 0,3. Bóng đổ không lay theo (shader shadow riêng), với biên độ nhỏ thì không nhận ra.
+- **Nước** (`src/render/water.ts`): normal map gợn sóng sinh bằng code (tổng sóng sin, liền mạch), trôi theo dòng. Phản chiếu theo góc nhìn (fresnel), nhìn thẳng xuống thì thấy trong. Vừa/Cao phản chiếu phẳng (mirror 512²) bầu trời, mặt đất, cây, đá; Thấp chỉ phản chiếu bầu trời.
 - Map có thể có **heightmap** (`src/sim/terrain.ts`): lưới độ cao 1 m, dùng chung cho mô phỏng (người chơi, thú, giáo ném bám theo dốc) và mesh hiển thị.
 - Màu đất tô theo đỉnh (vertex color): cỏ, cỏ khô theo noise, đất dọc lối mòn, đá ở sườn dốc, bùn sát nước. Thêm một texture lốm đốm lặp lại mỗi 4 m để mặt đất không trông như nhựa.
 - Vật thể đặt trên dốc lấy **điểm thấp nhất dưới chân** (`seat` trong `src/maps/scatter.ts`) để không bị hở chân.

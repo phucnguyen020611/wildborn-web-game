@@ -287,7 +287,7 @@ Bảng so sánh dưới đây giữ lại để tham khảo lý do lựa chọn.
 
 - **Ngôn ngữ:** TypeScript với `strict` bật.
 - **Build/dev server:** Vite; import engine theo module để tree-shaking giảm dung lượng.
-- **Engine:** Babylon.js (`@babylonjs/core`, `@babylonjs/loaders`), import theo từng module.
+- **Engine:** Babylon.js (`@babylonjs/core`, `@babylonjs/loaders`, `@babylonjs/materials` cho bầu trời vật lý và vật liệu địa hình), import theo từng module.
 - **Va chạm / vật lý:** tự viết trong lớp simulation (`src/sim/`): va chạm hình tròn với hộp, đứng lên khối, bước qua bậc thấp. Cách này không tốn dung lượng tải và server PvP dùng lại được. Chỉ thêm **Havok** (WASM ~2 MB) khi cần ragdoll, vật thể vật lý hoặc địa hình phức tạp.
 - **UI menu/HUD:** HTML/CSS overlay trên canvas (dễ i18n, dễ hỗ trợ font tiếng Việt, accessibility tốt hơn), giữ nhẹ — không cần framework UI lớn cho prototype.
 - **i18n:** module tự viết (`src/i18n/`) đọc JSON, có fallback và tham số; chuyển sang thư viện (ví dụ i18next) nếu cần số nhiều/định dạng phức tạp.

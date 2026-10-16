@@ -13,6 +13,7 @@ Mọi asset trong bản build phải có dòng ở đây (spec mục 10.6). Asse
 | `wpn_spear` | Tự làm: `tools/blender/make_spear.py` → `art-source/weapons/wpn_spear.blend` | Dự án WILDBORN | Thuộc dự án | 2026-10-15 | .blend tạo bằng script, 3 vật liệu màu trơn, không texture | Blender → glTF, rồi `npm run assets` | 9 KB | Giáo cầm tay + giáo ném |
 | `chr_fp_arms` | [OpenGameArt — fps arms (rigged only)](https://opengameart.org/content/fps-arms-rigged-only) (`FPS ARMS RIG 1.blend`) | para (mesh và texture tạo bằng MakeHuman) | CC0-1.0 | 2026-10-15 | .blend có rig, texture 1024² | `tools/blender/make_fp_arms.py`: tạo dáng tay phải cầm giáo bằng IK, đóng băng thành mesh tĩnh, bỏ tay trái, đưa về khung tọa độ của giáo; rồi `npm run assets` | 151 KB | Tay góc nhìn thứ nhất |
 | `crt_mammoth` | Tự làm: `tools/blender/make_mammoth.py` → `art-source/creatures/crt_mammoth.blend` | Dự án WILDBORN | Thuộc dự án | 2026-10-15 | .blend tạo bằng script: khối lông bo tròn (smooth shading), xương cứng theo từng bộ phận, 6 clip (Idle, Walk, Run, Attack, Hit, Death), màu trơn | Blender → glTF, rồi `npm run assets` | 112 KB, ~5.900 đỉnh | Boss đầu tiên |
+| `ter_grass_ground`, `ter_forest_ground_04`, `ter_rocky_terrain_02` (màu + normal) | [Poly Haven — Grass Ground](https://polyhaven.com/a/grass_ground), [Forest Ground 04](https://polyhaven.com/a/forest_ground_04), [Rocky Terrain 02](https://polyhaven.com/a/rocky_terrain_02) | Charlotte Baglioni; Rob Tuytel & Rico Cilliers; Amal Kumar | CC0-1.0 | 2026-10-16 | JPG 1K (diffuse + normal OpenGL), tổng 6,3 MB | `npm run assets -- textures`: KTX2, màu ETC1S 1024², normal UASTC 512² + RDO + zstd | 1374 KB (6 file) | Mặt đất mọi map (`src/render/terrain.ts`) |
 
 ## Ghi công bắt buộc (CC-BY)
 
@@ -20,7 +21,7 @@ Khi phát hành bản có dùng asset CC-BY, màn hình credits phải ghi:
 
 - Fox — rigging & animation by tomkranis (CC BY 4.0); glTF conversion by @AsoboStudio and @scurest (CC BY 4.0). Model by PixelMannen (CC0).
 
-Ghi công tự nguyện (CC0, không bắt buộc nhưng nên có): Quaternius, Kenney, artisticdude, TinyWorlds, para / MakeHuman.
+Ghi công tự nguyện (CC0, không bắt buộc nhưng nên có): Quaternius, Kenney, artisticdude, TinyWorlds, para / MakeHuman, Poly Haven (Charlotte Baglioni, Rob Tuytel, Rico Cilliers, Amal Kumar).
 
 ## Quy trình
 

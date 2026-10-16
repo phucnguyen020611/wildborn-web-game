@@ -112,3 +112,19 @@ Menu hiện trước khi model tải xong, nhưng trong lúc đó chưa có gì 
 - Tam giác chủ yếu đến từ cây (5–9k đỉnh mỗi cây). Nếu máy tầm trung bị chậm, hạ `drawDistance` của cây xuống 80–90 m hoặc thêm LOD cho cây.
 - Vẫn cần chạy `?bench` trên máy tầm trung.
 
+## 2026-10-16 — Nhóm B: bầu trời, bóng nhiều tầng, texture mặt đất, nước, gió, thảm cỏ
+
+**Thay đổi:** `SkyMaterial` + ánh sáng theo giờ; bóng cascaded (cây cũng đổ bóng); `TerrainMaterial` 3 texture; nước có phản chiếu phẳng; gió trên GPU; thảm cỏ khoảng 41.500 bụi (thin instance, chỉ vẽ trong tầm).
+**Đo bằng:** vẽ 20 khung liên tiếp, chờ GPU xong (`readPixels`), browser pane Chromium, Apple M4, canvas 1536×1152, cài đặt mặc định. Không dùng `?bench`: pane nhúng đang giới hạn rAF ở khoảng 1 khung/giây nên số đo theo rAF vô nghĩa.
+
+| Góc nhìn | ms/khung | Tam giác lượt chính |
+|---|---|---|
+| Trại nhìn về bắc | 7,9 | ~700k (cây ~470k, cỏ ~90k) |
+| Chỗ lội suối | 10,9 | — |
+| Đồng cỏ | 9,6 | — |
+
+- Tính cả lượt vẽ bóng (2–3 tầng) và gương nước, tổng số tam giác mỗi khung khoảng 2–4 triệu. Phần lớn là cây vẽ vào shadow map. Nếu máy tầm trung chậm: giảm `shadowMaxZ` (90 m), cho cây xa không đổ bóng, hoặc thêm LOD cho cây.
+- Model + âm thanh + texture: 5,6 MB (trước 4,3 MB; thêm 1,4 MB texture mặt đất).
+- Shader cỏ biên dịch bất đồng bộ nên xuất hiện sau vài khung đầu.
+- Vẫn cần chạy `?bench` trên máy tầm trung và trên Chrome thật.
+
