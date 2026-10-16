@@ -15,6 +15,8 @@ import { loadCreature } from './render/creature';
 import { loadProps } from './render/props';
 import { CREATURES } from './config/creatures';
 import { testArena } from './maps/testArena';
+import { pineValley } from './maps/pineValley';
+import { groundAt } from './sim/terrain';
 
 type State = 'menu' | 'playing' | 'paused' | 'ended';
 
@@ -47,7 +49,7 @@ function main() {
     return;
   }
 
-  const map = testArena;
+  const map = new URLSearchParams(location.search).get('map') === 'arena' ? testArena : pineValley;
   const renderer = createRenderer(canvas, map);
   const debug = createDebugOverlay(renderer.engine, renderer.scene);
   const hud = createHud();
@@ -164,6 +166,7 @@ function main() {
       renderer.thrownSpear.update(prev.thrown, world.thrown, alpha);
       if (bench?.running) {
         const p = bench.tick(performance.now());
+        p.y = groundAt(map, p.x, p.z);
         renderer.render(p, p, 1, p.yaw, 0);
       } else {
         renderer.render(prev.player, world.player, alpha, input.look.yaw, input.look.pitch);
