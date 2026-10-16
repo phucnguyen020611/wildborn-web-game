@@ -1,6 +1,7 @@
 // Optimizes every .glb/.gltf in art-source/ into src/assets/ (same relative path, always .glb);
 // .blend/.fbx are first exported to glTF by headless Blender (set BLENDER=/path if not in a standard place),
-// and encodes art-source/audio/* to AAC (.m4a), which every target browser can decode, Safari included.
+// encodes art-source/audio/* to AAC (.m4a), which every target browser can decode, Safari included,
+// and art-source/textures/* to KTX2.
 // Game code imports outputs with `?url`, so Vite adds content hashes for long-term caching.
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
@@ -68,6 +69,34 @@ for (const file of walk(SRC)) {
     // SFX: mono 96 kbps; ambience loops: stereo 64 kbps per channel is plenty for a bed of noise.
     const args = ambience ? ['-ac', '2', '-b:a', '128k'] : ['-ac', '1', '-b:a', '96k'];
     const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-i', file, '-c:a', 'aac', ...args, out], {
+      stdio: 'inherit',
+    });
+    if (r.status !== 0) process.exit(r.status ?? 1);
+    console.log(`${file} (${kb(file)}) -> ${out} (${kb(out)})`);
+    continue;
+  }
+  if (/^art-source\/textures\/.*\.(png|jpe?g)$/i.test(file.replaceAll('\\', '/'))) {
+    // Standalone textures (terrain): KTX2 with mipmaps. Colour: ETC1S at full size. Normal maps (`_nor`):
+    // UASTC at half size, linear, RDO + zstd: from walking height 512² is plenty and a quarter the bytes.
+    if (!hasKtx) {
+      console.error('! `ktx` CLI not found: cannot encode textures.');
+      process.exit(1);
+    }
+    const out = join(OUT, relative(SRC, file)).replace(/\.\w+$/, '.ktx2');
+    mkdirSync(dirname(out), { recursive: true });
+    const args = /_nor\./.test(file)
+      ? [
+          '--format',
+          'R8G8B8_UNORM',
+          '--assign-tf',
+          'linear',
+          '--scale',
+          '0.5',
+          '--encode',
+          'uastc',
+        ].concat(['--uastc-quality', '2', '--uastc-rdo', '--zstd', '18', '--normal-mode'])
+      : ['--format', 'R8G8B8_SRGB', '--encode', 'basis-lz'];
+    const r = spawnSync('ktx', ['create', ...args, '--generate-mipmap', file, out], {
       stdio: 'inherit',
     });
     if (r.status !== 0) process.exit(r.status ?? 1);
