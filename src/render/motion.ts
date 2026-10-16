@@ -1,9 +1,9 @@
 import { PLAYER } from '../config/player';
 import type { PlayerState } from '../sim/player';
 
-const STEP = 0.8; // metres per footstep; one bob dip per step
-const CAM_BOB = 0.035; // camera height swing at full sprint (m)
-const VM_BOB = 0.012; // weapon figure-eight at full sprint (m)
+const STEP = 1.3; // metres per bob dip: long, unhurried strides (playtest: 0.8 felt jittery)
+const CAM_BOB = 0.055; // camera height swing at full sprint (m)
+const VM_BOB = 0.022; // weapon figure-eight at full sprint (m)
 const SWAY = 0.06; // weapon lag per radian of look turned this frame (m)
 const SWAY_MAX = 0.04;
 
@@ -33,7 +33,7 @@ export function createMotion() {
 
       const step = Math.sin(phase); // one full cycle every two steps
       out.camY = -Math.abs(step) * CAM_BOB * amount - dip;
-      out.camX = Math.cos(phase) * CAM_BOB * 0.4 * amount;
+      out.camX = Math.cos(phase) * CAM_BOB * 0.7 * amount; // wide side-to-side sway
 
       // Look lag: the weapon trails the turn, then settles back.
       const dYaw = Math.atan2(Math.sin(yaw - lastYaw), Math.cos(yaw - lastYaw));
