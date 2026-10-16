@@ -84,7 +84,9 @@ export function stepWorld(w: World, cmd: PlayerCommand, map: MapData, dt: number
     return;
   }
 
-  stepPlayer(w.player, cmd, map, dt);
+  const impact = stepPlayer(w.player, cmd, map, dt);
+  if (impact > PLAYER.safeFallSpeed)
+    hurtPlayer(w, (impact - PLAYER.safeFallSpeed) * PLAYER.fallDamage);
   const before = w.spear.phase;
   const released = stepSpear(w.spear, cfg, cmd.attack, cmd.throw, dt);
   if (before !== 'windup' && w.spear.phase === 'windup') {
@@ -138,11 +140,15 @@ export function stepWorld(w: World, cmd: PlayerCommand, map: MapData, dt: number
       map,
       dt,
     );
-    if (dmg <= 0 || w.outcome !== 'playing') return;
-    w.playerHp = Math.max(0, w.playerHp - dmg);
-    w.events.push({ type: 'hurt', damage: dmg });
-    if (w.playerHp === 0) end(w, 'lost');
+    if (dmg > 0) hurtPlayer(w, dmg);
   });
+}
+
+function hurtPlayer(w: World, dmg: number) {
+  if (w.outcome !== 'playing') return;
+  w.playerHp = Math.max(0, w.playerHp - dmg);
+  w.events.push({ type: 'hurt', damage: dmg });
+  if (w.playerHp === 0) end(w, 'lost');
 }
 
 function end(w: World, outcome: 'won' | 'lost') {

@@ -35,4 +35,13 @@ export function heightAt(t: Terrain, x: number, z: number) {
 export const groundAt = (map: MapData, x: number, z: number) =>
   map.terrain ? heightAt(map.terrain, x, z) : 0;
 
+/** Terrain gradient (dh/dx, dh/dz) at (x, z): points uphill, its length is rise over run. */
+export function slopeAt(map: MapData, x: number, z: number) {
+  const e = 0.5;
+  return {
+    x: (groundAt(map, x + e, z) - groundAt(map, x - e, z)) / (2 * e),
+    z: (groundAt(map, x, z + e) - groundAt(map, x, z - e)) / (2 * e),
+  };
+}
+
 export const boxTop = (b: Box) => (b.y ?? 0) + b.h;

@@ -150,4 +150,19 @@ describe('stepWorld combat', () => {
       stepWorld(w, { ...cmd(), moveZ: 1, pitch: 0 }, arena, DT);
     expect(boss.angry).toBe(true);
   });
+
+  it('a long fall hurts, a normal jump does not', () => {
+    const w = createWorld({ ...map, creatures: [] });
+    stepWorld(w, { ...cmd(), jump: true }, map, DT);
+    for (let i = 0; i < 90; i++) stepWorld(w, cmd(), map, DT);
+    expect(w.playerHp).toBe(PLAYER.hp);
+    Object.assign(w.player, { y: 8, onGround: false });
+    const events = [];
+    for (let i = 0; i < 90; i++) {
+      stepWorld(w, cmd(), map, DT);
+      events.push(...w.events);
+    }
+    expect(w.playerHp).toBeLessThan(PLAYER.hp);
+    expect(events.some((e) => e.type === 'hurt')).toBe(true);
+  });
 });

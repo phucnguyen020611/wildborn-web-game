@@ -99,4 +99,23 @@ describe('stepPlayer', () => {
     }
     expect(p.y).toBeCloseTo(-p.z * 0.3, 1);
   });
+
+  it('slides down slopes too steep to climb and cannot jump up them', () => {
+    const wall: MapData = {
+      ...empty,
+      terrain: bakeTerrain(100, 50, (_x, z) => Math.max(0, z) * 1.5),
+    };
+    const p = createPlayer(wall);
+    for (let i = 0; i < 120; i++) stepPlayer(p, { ...idle, moveZ: 1, jump: true }, wall, DT);
+    expect(p.y).toBeLessThan(1); // pressed against the foot of the slope, never far up it
+  });
+
+  it('reports the landing speed after a fall', () => {
+    const p = createPlayer(empty);
+    p.y = 5;
+    p.onGround = false;
+    let impact = 0;
+    for (let i = 0; i < 120 && !impact; i++) impact = stepPlayer(p, idle, empty, DT);
+    expect(impact).toBeCloseTo(Math.sqrt(2 * PLAYER.gravity * 5), 0);
+  });
 });

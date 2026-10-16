@@ -1,7 +1,7 @@
 import { PLAYER } from '../config/player';
 import type { MapData } from '../maps/types';
 import { clampToArena, overlapsBox, pushOutOfBox } from './collision';
-import { boxTop, groundAt } from './terrain';
+import { boxTop, groundAt, slopeAt } from './terrain';
 
 /** One simulation step of player intent. Absolute yaw (radians) so it can later be sent to a server as-is. */
 export interface PlayerCommand {
@@ -38,7 +38,10 @@ export function createPlayer(map: MapData): PlayerState {
   };
 }
 
-/** Mutates `p` by one fixed step. No rendering or DOM access here. */
+/**
+ * Mutates `p` by one fixed step. No rendering or DOM access here.
+ * Returns the landing speed (m/s) if the player touched down this step, else 0.
+ */
 export function stepPlayer(p: PlayerState, cmd: PlayerCommand, map: MapData, dt: number) {
   // Left-handed, y-up (Babylon default): yaw 0 faces +z, right is +x.
   const sin = Math.sin(cmd.yaw);
@@ -55,7 +58,19 @@ export function stepPlayer(p: PlayerState, cmd: PlayerCommand, map: MapData, dt:
   p.vx += (dx * speed - p.vx) * k;
   p.vz += (dz * speed - p.vz) * k;
 
-  if (cmd.jump && p.onGround) {
+  // Too steep to stand on (only bare terrain, not a box top): no walking or jumping up it, slide down.
+  const g = slopeAt(map, p.x, p.z);
+  const rise = Math.hypot(g.x, g.z);
+  const steep = p.onGround && rise > PLAYER.maxSlope && p.y <= groundAt(map, p.x, p.z) + 0.05;
+  if (steep) {
+    const ux = g.x / rise;
+    const uz = g.z / rise;
+    const up = Math.max(0, p.vx * ux + p.vz * uz);
+    p.vx -= (up + PLAYER.slideSpeed) * ux;
+    p.vz -= (up + PLAYER.slideSpeed) * uz;
+  }
+
+  if (cmd.jump && p.onGround && !steep) {
     p.vy = PLAYER.jumpSpeed;
     p.onGround = false;
   }
@@ -74,11 +89,14 @@ export function stepPlayer(p: PlayerState, cmd: PlayerCommand, map: MapData, dt:
   for (const b of map.boxes) if (boxTop(b) > floor && overlapsBox(p, r, b)) floor = boxTop(b);
   // Walking downhill: stick to the slope instead of taking tiny falls (which would block jumping).
   const snap = p.onGround && p.vy <= 0 && p.y - floor < PLAYER.stepHeight;
+  let impact = 0;
   if (p.y <= floor || snap) {
+    if (!p.onGround) impact = -p.vy;
     p.y = floor;
     p.vy = 0;
     p.onGround = true;
   } else {
     p.onGround = false;
   }
+  return impact;
 }
