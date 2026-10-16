@@ -128,7 +128,7 @@ Trước khi phát hành vẫn cần kiểm tra nhãn hiệu, tên miền, tên 
 
 **Phạm vi prototype tối thiểu:** Một arena nhỏ, một vũ khí, một boss, một vòng lặp chiến đấu hoàn chỉnh.
 
-**Cần thiết kế sau:** cốt truyện, vòng lặp chơi giữa các boss (khám phá, thu thập, nâng cấp?) và cách dẫn dắt người chơi.
+**Khung Story Mode** (vùng, boss, vòng chơi, danh sách asset): xem `docs/STORY_MODE.md` *(bản nháp 2026-10-16)*. Cốt truyện chi tiết và cân bằng số liệu làm sau.
 
 ### 4.2. Team Deathmatch — Tribal War
 
