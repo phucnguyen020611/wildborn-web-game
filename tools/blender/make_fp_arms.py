@@ -19,6 +19,7 @@ EYE = Vector((0, 0, 1.19))  # rig camera position (rig units): looks along +Y, u
 
 # Spear viewmodel rest transform in game camera space (Babylon: x right, y up, z forward, metres).
 REST_POS = Vector((0.22, -0.19, 0.45))
+SHOULDER = Vector((0.3, -0.38, -0.5))  # camera space, behind the eye even when the thrust pushes 0.3 m forward
 PITCH = math.pi / 2 - 0.12  # rotation.x
 YAW = -0.06  # rotation.y
 
@@ -130,6 +131,61 @@ bmesh.ops.delete(
     geom=[v for v in bm.verts if any(g in left and w > 0.5 for g, w in v[deform].items())],
     context="VERTS",
 )
+# Drop scraps of the left arm/chest that aren't connected to the right arm (keep the biggest piece).
+pieces, seen = [], set()
+for v in bm.verts:
+    if v in seen:
+        continue
+    piece, todo = set(), [v]
+    while todo:
+        u = todo.pop()
+        if u in piece:
+            continue
+        piece.add(u)
+        todo += [e.other_vert(u) for e in u.link_edges]
+    seen |= piece
+    pieces.append(piece)
+arm_piece = max(pieces, key=len)
+bmesh.ops.delete(bm, geom=[v for p in pieces if p is not arm_piece for v in p], context="VERTS")
+# The rig's arm ends in an open cut at the shoulder, which slides into view when the thrust pushes the arm
+# forward. Extend that cut to the shoulder (out of view) and cap it.
+boundary = [e for e in bm.edges if e.is_boundary]
+loops = []
+while boundary:  # group boundary edges into connected loops
+    loop, todo = set(), [boundary[0]]
+    while todo:
+        e = todo.pop()
+        if e in loop:
+            continue
+        loop.add(e)
+        todo += [f for v in e.verts for f in v.link_edges if f.is_boundary and f not in loop]
+    loops.append(loop)
+    boundary = [e for e in boundary if e not in loop]
+centre = lambda edges: sum((v.co for e in edges for v in e.verts), Vector()) / (2 * len(edges))
+cut = min(loops, key=lambda l: centre(l).length)  # the arm's cut: the opening nearest the hand (origin)
+uv = bm.loops.layers.uv.active
+old_uv = {v: next(iter(l[uv].uv.copy() for l in v.link_loops), None) for e in cut for v in e.verts}
+c = centre(cut)
+# Toward the right shoulder: below and right of the eye, out of view even with the thrust's 0.3 m push.
+b = R.transposed() @ (SHOULDER - REST_POS)
+back = Vector((-b.x, -b.z, b.y)) - c  # camera space -> spear-local Blender axes, as above
+new = bmesh.ops.extrude_edge_only(bm, edges=list(cut))["geom"]
+new_verts = [g for g in new if isinstance(g, bmesh.types.BMVert)]
+for v in new_verts:
+    v.co = c + (v.co - c) * 0.9 + back  # slight taper toward the shoulder
+cap = bmesh.ops.contextual_create(bm, geom=[g for g in new if isinstance(g, bmesh.types.BMEdge)])
+added = [g for g in new if isinstance(g, bmesh.types.BMFace)] + cap["faces"]
+for f in added:
+    f.material_index = 0
+    for l in f.loops:  # reuse the cut's skin UVs so the extension samples skin, not a random texel
+        if l.vert in old_uv:
+            src = l.vert
+        else:  # an extruded vertex: undo the move to find the cut vertex it came from
+            home = c + (l.vert.co - back - c) / 0.9
+            src = min(old_uv, key=lambda o: (o.co - home).length)
+        if old_uv[src] is not None:
+            l[uv].uv = old_uv[src]
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces)  # one closed piece now, so outward is well defined
 bm.to_mesh(mesh)
 bm.free()
 for o in list(bpy.data.objects):
