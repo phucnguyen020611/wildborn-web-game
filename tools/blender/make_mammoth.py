@@ -1,4 +1,4 @@
-# Builds the stylized low-poly woolly mammoth boss: faceted body parts, a rigid-skinned armature
+# Builds the stylized woolly mammoth boss: soft lumpy fur masses (smooth shaded), a rigid-skinned armature
 # (each part follows one bone) and keyframed clips: idle, walk, run, attack, hit, death.
 #   blender -b --factory-startup --python tools/blender/make_mammoth.py -- art-source/creatures/crt_mammoth.blend
 # Convention: metres, origin between the feet, faces -Y in Blender (= glTF +Z, the game's "forward").
@@ -37,12 +37,13 @@ IVORY = material("mammoth_ivory", (0.88, 0.83, 0.72), roughness=0.6)
 parts = []  # (object, bone name)
 
 
-def finish(bm, name, mat, bone, smooth=False):
+def finish(bm, name, mat, bone, smooth=True):
     mesh = bpy.data.meshes.new(name)
     bm.to_mesh(mesh)
     bm.free()
     for p in mesh.polygons:
-        p.use_smooth = smooth
+        # Smooth sides; n-gon caps (tube ends) stay flat, which also keeps their edges crisp.
+        p.use_smooth = smooth and len(p.vertices) <= 4
     mesh.materials.append(mat)
     obj = bpy.data.objects.new(name, mesh)
     scene.collection.objects.link(obj)
@@ -50,18 +51,21 @@ def finish(bm, name, mat, bone, smooth=False):
     return obj
 
 
-def blob(name, mat, bone, center, radii, subdiv=2, jitter=0.06):
-    """Faceted, slightly lumpy ellipsoid: the shaggy-fur look comes from the jitter + flat shading."""
+def blob(name, mat, bone, center, radii, subdiv=4, jitter=0.06, shag=0.0):
+    """Soft, lumpy ellipsoid: smooth low-frequency bumps read as fur masses; `shag` adds ragged tufts."""
     bm = bmesh.new()
     bmesh.ops.create_icosphere(bm, subdivisions=subdiv, radius=1.0)
+    k = [random.uniform(0, 6.28) for _ in range(3)]
     for v in bm.verts:
         n = v.co.normalized()
-        v.co = Vector((n.x * radii[0], n.y * radii[1], n.z * radii[2])) * (1 + random.uniform(-jitter, jitter))
+        lump = math.sin(5 * n.x + k[0]) * math.sin(4 * n.y + k[1]) * math.sin(6 * n.z + k[2])
+        ragged = random.uniform(-shag, shag) if n.z < 0.2 else 0  # tufts only on the lower half
+        v.co = Vector((n.x * radii[0], n.y * radii[1], n.z * radii[2])) * (1 + jitter * lump + ragged)
         v.co += Vector(center)
     return finish(bm, name, mat, bone)
 
 
-def tube(name, mat, bone, a, b, r_a, r_b, segments=8, jitter=0.0):
+def tube(name, mat, bone, a, b, r_a, r_b, segments=14, jitter=0.0):
     """Tapered cylinder from point a to point b."""
     a, b = Vector(a), Vector(b)
     bm = bmesh.new()
@@ -75,7 +79,7 @@ def tube(name, mat, bone, a, b, r_a, r_b, segments=8, jitter=0.0):
     return finish(bm, name, mat, bone)
 
 
-def curve_tube(name, mat, bone, points, r_start, r_end, segments=8):
+def curve_tube(name, mat, bone, points, r_start, r_end, segments=12):
     """Chain of tubes through `points`, tapering from r_start to r_end (tusks, trunk tip)."""
     n = len(points) - 1
     for i in range(n):
@@ -86,14 +90,14 @@ def curve_tube(name, mat, bone, points, r_start, r_end, segments=8):
 
 # ---------- body (faces -Y) ----------
 blob("body", FUR, "body", (0, 0.1, 2.15), (1.15, 1.9, 1.25))
-blob("belly_fur", FUR_DARK, "body", (0, 0.1, 1.55), (1.05, 1.75, 0.55), jitter=0.12)  # shaggy hanging fur
+blob("belly_fur", FUR_DARK, "body", (0, 0.1, 1.55), (1.05, 1.75, 0.55), jitter=0.1, shag=0.12)  # shaggy hanging fur
 blob("hump", FUR_DARK, "body", (0, -0.75, 2.95), (0.95, 0.95, 0.75))
 blob("rump", FUR, "body", (0, 1.45, 2.05), (0.95, 0.75, 1.0))
 blob("head", FUR_DARK, "head", (0, -2.05, 2.95), (0.72, 0.75, 0.85))
 blob("cheeks", FUR, "head", (0, -2.2, 2.55), (0.62, 0.55, 0.5))
 for s in (-1, 1):
-    blob(f"ear_{s}", SKIN, "head", (0.62 * s, -1.85, 3.05), (0.12, 0.3, 0.35), subdiv=1, jitter=0.1)
-    blob(f"eye_{s}", SKIN, "head", (0.5 * s, -2.55, 2.95), (0.07, 0.07, 0.07), subdiv=1, jitter=0.0)
+    blob(f"ear_{s}", SKIN, "head", (0.62 * s, -1.85, 3.05), (0.12, 0.3, 0.35), subdiv=3, jitter=0.1)
+    blob(f"eye_{s}", SKIN, "head", (0.5 * s, -2.55, 2.95), (0.07, 0.07, 0.07), subdiv=3, jitter=0.0)
     curve_tube(  # tusk: curves down, forward, then up and inward
         f"tusk_{s}", IVORY, "head",
         [(0.32 * s, -2.55, 2.4), (0.45 * s, -2.95, 1.9), (0.5 * s, -3.45, 1.7), (0.4 * s, -3.85, 1.95), (0.18 * s, -3.95, 2.35)],
@@ -111,10 +115,10 @@ LEGS = {"FL": (-0.62, -0.95), "FR": (0.62, -0.95), "BL": (-0.6, 1.25), "BR": (0.
 for leg, (x, y) in LEGS.items():
     tube(f"leg_{leg}_up", FUR, f"leg.{leg}.up", (x, y, 1.95), (x, y, 0.95), 0.42, 0.33, jitter=0.04)
     tube(f"leg_{leg}_low", FUR_DARK, f"leg.{leg}.low", (x, y, 0.98), (x, y, 0.12), 0.33, 0.3, jitter=0.03)
-    tube(f"foot_{leg}", SKIN, f"leg.{leg}.low", (x, y, 0.16), (x, y, 0.0), 0.36, 0.36, segments=10)
+    tube(f"foot_{leg}", SKIN, f"leg.{leg}.low", (x, y, 0.16), (x, y, 0.0), 0.36, 0.36)
 
 tube("tail_0", FUR, "tail", (0, 2.1, 2.45), (0, 2.35, 1.75), 0.1, 0.06)
-blob("tail_tuft", FUR_DARK, "tail", (0, 2.38, 1.65), (0.12, 0.12, 0.18), subdiv=1)
+blob("tail_tuft", FUR_DARK, "tail", (0, 2.38, 1.65), (0.12, 0.12, 0.18), subdiv=3, shag=0.2)
 
 # ---------- armature ----------
 arm_data = bpy.data.armatures.new("mammoth_rig")
