@@ -22,7 +22,9 @@ npm run dev      # http://localhost:5173
 
 **Cài đặt** (menu chính hoặc menu tạm dừng): độ nhạy chuột, đảo trục dọc, FOV, chất lượng Thấp/Vừa/Cao, rung camera, âm lượng tổng/hiệu ứng/môi trường. Lưu trong trình duyệt (`localStorage`).
 
-**Vòng chơi:** săn **voi ma mút** ở nửa xa của bãi. Ma mút nổi giận khi bạn tới gần (khoảng 12 m) hoặc khi bị đánh. Trước mỗi cú húc, nó **ngẩng đầu và nhấp nháy màu hổ phách**: lùi ra hoặc né sang ngang, vì hướng húc đã khóa từ lúc báo đòn. Nó quay chậm, nên vòng ra sườn mà đâm. Cáo là thú nền: chạy trốn, bị đánh thì cắn lại. Hạ ma mút là thắng, hết máu là thua.
+**Map:** mặc định là **Thung lũng Thông** (vùng 1, xem [docs/STORY_MODE.md](docs/STORY_MODE.md)): xuất phát ở trại phía nam, theo lối mòn lội qua suối, băng qua đồng cỏ tới bãi đấu của ma mút ở phía bắc. Arena thử nghiệm cũ vẫn mở được bằng `?map=arena`.
+
+**Vòng chơi:** săn **voi ma mút** ở bãi đấu cuối lối mòn. Ma mút nổi giận khi bạn tới gần (khoảng 12 m) hoặc khi bị đánh. Trước mỗi cú húc, nó **ngẩng đầu và nhấp nháy màu hổ phách**: lùi ra hoặc né sang ngang, vì hướng húc đã khóa từ lúc báo đòn. Nó quay chậm, nên vòng ra sườn mà đâm. Cáo là thú nền: chạy trốn, bị đánh thì cắn lại. Hạ ma mút là thắng, hết máu là thua.
 
 **Benchmark:** mở `?bench` (ví dụ `http://localhost:5173/?bench`): camera tự chạy 22 giây rồi hiện kết quả frame time, GPU và trình duyệt. Dùng để đo trên máy khác mà không cần chơi.
 
@@ -30,7 +32,7 @@ npm run dev      # http://localhost:5173
 
 Model gốc đặt trong `art-source/`, chạy `npm run assets` để tối ưu (`npm run assets -- <tên>` chỉ build file có đường dẫn chứa `<tên>`). File `.blend`/`.fbx` được Blender xuất sang glTF tự động; script tạo asset nằm trong `tools/blender/`. Texture được nén KTX2 nếu máy có CLI `ktx` ([KTX-Software](https://github.com/KhronosGroup/KTX-Software/releases)), nếu không thì dùng WebP. Mọi asset phải được ghi vào [docs/ASSET_REGISTER.md](docs/ASSET_REGISTER.md).
 
-`art-source/environment/` không nằm trong git (35 MB, đều lấy từ Quaternius Stylized Nature MegaKit). Tạo lại bằng `npm run import-megakit -- <thư mục glTF của kit>`; mặc định là `../../Assets/stylized-nature-megakit/glTF`.
+`art-source/environment/` không nằm trong git (30 MB, đều lấy từ Quaternius Stylized Nature MegaKit). Tạo lại bằng `npm run import-megakit -- <thư mục glTF của kit>` (mặc định là `../../Assets/stylized-nature-megakit/glTF`). Lệnh này gộp các model vào một file kit dùng chung texture; muốn thêm model thì thêm tên vào `tools/asset-pipeline/import-megakit.sh` và khai báo trong `src/config/props.ts`.
 
 ## Cấu trúc
 

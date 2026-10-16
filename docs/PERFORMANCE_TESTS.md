@@ -93,3 +93,22 @@ Menu hiện trước khi model tải xong, nhưng trong lúc đó chưa có gì 
 | Model + âm thanh | 7,3 MB | ~6 MB |
 
 \*Có một khung hình kéo dài khoảng 1 giây (max 1.008 ms), nhiều khả năng do pane bị ẩn thoáng qua hoặc shader biên dịch muộn; nó kéo số trung bình lên. Lần chạy lại không hoàn tất vì pane bị ẩn. p99 tăng lên khoảng 17 ms, có thể do shadow pass. Cần đo lại trên Chrome thật, và nếu p99 vẫn cao thì kiểm tra shadow map, ví dụ hạ xuống 1024 cho mức Vừa.
+
+## 2026-10-16 — Map vùng 1 (Thung lũng Thông) với địa hình và kit môi trường
+
+**Thay đổi:** map 160 × 160 m có heightmap, suối, khoảng 2.800 prop (gần 8 lần arena), cây cỏ từ một file kit dùng chung texture, khoảng cách vẽ 45 m (cây cỏ nhỏ) / 110 m (cây to).
+**Đo bằng:** `?bench`, browser pane Chromium, Apple M4, 1351×985. Lúc này camera bench đã bám theo địa hình.
+
+| Chỉ số | Kết quả | Arena cũ (2026-10-15) |
+|---|---|---|
+| Frame time trung bình | 8,34 ms (chạm trần vsync 120 Hz) | 10,3 ms* |
+| p95 / p99 / max | 9,2 / 9,4 / 12,8 ms | 9,4 / 16,9 / 1.008 ms |
+| Tam giác mỗi khung hình (góc nặng nhất) | ~670k (trước khi thêm khoảng cách vẽ cho cây: ~880k) | — |
+| Draw call | ~60 | ~38 |
+| Model + âm thanh (bản build) | 4,3 MB | 7,3 MB |
+| Thời gian đến khi nút Chơi bật (dev server) | ~2 s | — |
+
+- **Không nhân bản bằng `instantiateModelsToScene` cho từng prop** khi kit lớn: mỗi lần gọi duyệt toàn bộ node của kit, với 2.100 prop mất khoảng 11 giây. Gọi `createInstance` trực tiếp trên mesh nguồn thì gần như tức thì.
+- Tam giác chủ yếu đến từ cây (5–9k đỉnh mỗi cây). Nếu máy tầm trung bị chậm, hạ `drawDistance` của cây xuống 80–90 m hoặc thêm LOD cho cây.
+- Vẫn cần chạy `?bench` trên máy tầm trung.
+
