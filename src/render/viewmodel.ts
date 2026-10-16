@@ -40,7 +40,11 @@ function model(
 }
 
 /** The spear in the player's hands, posed from the sim's thrust/throw phase. */
-export function createSpearViewmodel(scene: Scene, camera: Camera) {
+export function createSpearViewmodel(
+  scene: Scene,
+  camera: Camera,
+  motion: { vmX: number; vmY: number; vmRoll: number }, // step sway and look lag (render/motion.ts)
+) {
   const inFront = (m: AbstractMesh) => (m.renderingGroupId = VIEWMODEL_GROUP);
   const root = model(scene, spearUrl, 'viewmodel', inFront);
   // Arms are baked in the spear's local frame (tools/blender/make_fp_arms.py), so they follow every pose.
@@ -54,17 +58,24 @@ export function createSpearViewmodel(scene: Scene, camera: Camera) {
 
   function update(s: SpearState) {
     root.setEnabled(s.held);
+    root.rotation.z = motion.vmRoll;
     if (s.phase === 'throw') {
       // Draw back over the shoulder before release.
       const k = smooth(Math.min(1, s.t / cfg.throwWindup));
       root.position.set(REST.x + 0.05 * k, REST.y + 0.22 * k, REST.z - 0.3 * k);
-      return;
+    } else {
+      let push = 0; // 0 = rest, 1 = fully extended, negative = pulled back
+      if (s.phase === 'windup') push = -0.25 * (s.t / cfg.windup);
+      else if (s.phase === 'active') push = Math.min(1, s.t / 0.04);
+      else if (s.phase === 'recover') push = 1 - smooth(Math.min(1, s.t / cfg.recover));
+      root.position.set(
+        REST.x - 0.12 * Math.max(0, push),
+        REST.y + 0.06 * push,
+        REST.z + 0.3 * push,
+      );
     }
-    let push = 0; // 0 = rest, 1 = fully extended, negative = pulled back
-    if (s.phase === 'windup') push = -0.25 * (s.t / cfg.windup);
-    else if (s.phase === 'active') push = Math.min(1, s.t / 0.04);
-    else if (s.phase === 'recover') push = 1 - smooth(Math.min(1, s.t / cfg.recover));
-    root.position.set(REST.x - 0.12 * Math.max(0, push), REST.y + 0.06 * push, REST.z + 0.3 * push);
+    root.position.x += motion.vmX;
+    root.position.y += motion.vmY;
   }
 
   return { update };

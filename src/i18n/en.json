@@ -31,7 +31,7 @@
   "settings.quality_low": "Low",
   "settings.quality_medium": "Medium",
   "settings.quality_high": "High",
-  "settings.shake": "Camera shake",
+  "settings.shake": "Camera shake and bob",
   "settings.audio": "Audio",
   "settings.master": "Master volume",
   "settings.sfx": "Effects",

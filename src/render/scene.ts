@@ -18,6 +18,7 @@ import { PLAYER } from '../config/player';
 import type { MapData } from '../maps/types';
 import type { PlayerState } from '../sim/player';
 import { createSpearViewmodel, createThrownSpear } from './viewmodel';
+import { createMotion } from './motion';
 
 // Per preset: cap devicePixelRatio (Retina/4K), optionally render below native, and toggle sun shadows.
 const QUALITY: Record<Quality, { maxDpr: number; scale: number; shadows: boolean }> = {
@@ -79,7 +80,8 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
     box.freezeWorldMatrix();
   }
 
-  const viewmodel = createSpearViewmodel(scene, camera);
+  const motion = createMotion();
+  const viewmodel = createSpearViewmodel(scene, camera, motion.out);
   const thrownSpear = createThrownSpear(scene);
 
   let shakeUntil = 0;
@@ -96,6 +98,13 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
       prev.z + (curr.z - prev.z) * alpha,
     );
     camera.rotation.set(pitch, yaw, 0);
+    const m = motion.update(prev, curr, yaw, pitch, performance.now());
+    if (bobEnabled()) {
+      // Bob along the view's right vector, so it sways sideways whichever way you face.
+      camera.position.x += Math.cos(yaw) * m.camX;
+      camera.position.z -= Math.sin(yaw) * m.camX;
+      camera.position.y += m.camY;
+    }
     const shake = Math.max(0, shakeUntil - performance.now()) / SHAKE_MS; // 1 -> 0
     if (shake > 0) {
       camera.position.x += (Math.random() - 0.5) * SHAKE_M * shake;
@@ -113,10 +122,13 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
     sun.shadowEnabled = q.shadows;
   });
 
-  /** Short camera shake on impact; off when disabled in settings or the OS asks for reduced motion. */
+  // Camera shake and head bob: off when disabled in settings or the OS asks for reduced motion.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const bobEnabled = () => shakeEnabled && !reduced.matches;
+
+  /** Short camera shake on impact. */
   function shake() {
-    if (shakeEnabled && !matchMedia('(prefers-reduced-motion: reduce)').matches)
-      shakeUntil = performance.now() + SHAKE_MS;
+    if (bobEnabled()) shakeUntil = performance.now() + SHAKE_MS;
   }
 
   return { engine, scene, camera, render, viewmodel, thrownSpear, shake, castShadow };
