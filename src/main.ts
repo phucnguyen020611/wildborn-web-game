@@ -60,8 +60,6 @@ function main() {
     creatures: world.creatures.map((c) => ({ ...c.state })),
     thrown: null as typeof world.thrown,
   };
-  if (import.meta.env.DEV)
-    Object.assign(window, { scene: renderer.scene, world, prev, input, map }); // console inspection
   const idle: PlayerCommand = {
     moveX: 0,
     moveZ: 0,
@@ -76,6 +74,8 @@ function main() {
   const views: (Awaited<ReturnType<typeof loadCreature>> | null)[] = world.creatures.map(
     () => null,
   );
+  if (import.meta.env.DEV)
+    Object.assign(window, { scene: renderer.scene, renderer, views, world, prev, input, map }); // console inspection
   if (map.props)
     loadProps(renderer.scene, map.props, renderer.castShadow).catch((err) =>
       console.error('Failed to load props', err),
@@ -94,6 +94,8 @@ function main() {
     prev.thrown = null;
     input.look.yaw = input.look.pitch = 0;
     hud.reset();
+    renderer.effects.clear();
+    views.forEach((v) => v?.clearWounds());
   }
 
   // Esc always releases pointer lock (browser rule), so lock state drives pause.
@@ -137,8 +139,10 @@ function main() {
         if (e.type === 'thrust') audio.play('sfx_thrust');
         else if (e.type === 'throw') audio.play('sfx_throw');
         else if (e.type === 'pickup') audio.play('sfx_pickup');
-        else if (e.type === 'stick') audio.play('sfx_stick', e.at);
-        else if (e.type === 'hurt') {
+        else if (e.type === 'stick') {
+          audio.play('sfx_stick', e.at);
+          renderer.effects.dust(e.at);
+        } else if (e.type === 'hurt') {
           audio.play('sfx_hurt');
           renderer.shake();
           hud.hurt();
@@ -155,6 +159,8 @@ function main() {
           audio.play(e.killed ? 'sfx_kill' : 'sfx_hit', e.at);
           renderer.shake();
           views[e.creature]?.flash();
+          views[e.creature]?.wound(renderer.camera.position, e.at);
+          renderer.effects.blood(e.at);
           hud.hitMarker(e.killed);
         }
       }

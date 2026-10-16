@@ -19,6 +19,7 @@ import type { MapData } from '../maps/types';
 import type { PlayerState } from '../sim/player';
 import { createSpearViewmodel, createThrownSpear } from './viewmodel';
 import { createMotion } from './motion';
+import { createEffects } from './effects';
 
 // Per preset: cap devicePixelRatio (Retina/4K), optionally render below native, and toggle sun shadows.
 const QUALITY: Record<Quality, { maxDpr: number; scale: number; shadows: boolean }> = {
@@ -83,6 +84,7 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
   const motion = createMotion();
   const viewmodel = createSpearViewmodel(scene, camera, motion.out);
   const thrownSpear = createThrownSpear(scene);
+  const effects = createEffects(scene, map);
 
   let shakeUntil = 0;
   const SHAKE_MS = 150;
@@ -131,5 +133,5 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
     if (bobEnabled()) shakeUntil = performance.now() + SHAKE_MS;
   }
 
-  return { engine, scene, camera, render, viewmodel, thrownSpear, shake, castShadow };
+  return { engine, scene, camera, render, viewmodel, thrownSpear, effects, shake, castShadow };
 }

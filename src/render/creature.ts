@@ -7,6 +7,14 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import type { CreatureConfig } from '../config/creatures';
 import type { CreatureMode, CreatureState } from '../sim/creature';
+import type { Vec3 } from '../sim/geometry';
+import { Ray } from '@babylonjs/core/Culling/ray';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { CreateDisc } from '@babylonjs/core/Meshes/Builders/discBuilder';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+
+const MAX_WOUNDS = 8;
 
 const urls = import.meta.glob<string>('../assets/creatures/*.glb', {
   query: '?url',
@@ -66,7 +74,48 @@ export async function loadCreature(
     playing = g;
   }
 
+  const woundMat = new StandardMaterial(`${cfg.model}_wound`, scene);
+  woundMat.diffuseColor = new Color3(0.32, 0.03, 0.03);
+  woundMat.specularColor = new Color3(0.35, 0.2, 0.2); // a little wet sheen
+  woundMat.backFaceCulling = false;
+  const wounds: Mesh[] = [];
+
   return {
+    /**
+     * Leaves a wound where the line from `from` (the camera) through the hit point meets the model,
+     * stuck to the body so it moves with it. shortcut: picks the unanimated (bind-pose) mesh; close
+     * enough for rigid-skinned models, revisit if wounds drift on heavily animated ones.
+     */
+    wound(from: Vector3, at: Vec3) {
+      const dir = new Vector3(at.x - from.x, at.y - from.y, at.z - from.z);
+      const length = dir.length() + 3;
+      const hit = scene.pickWithRay(new Ray(from, dir.normalize(), length), (m) =>
+        container.meshes.includes(m),
+      );
+      if (!hit?.pickedPoint) return;
+      const normal = hit.getNormal(true) ?? dir.scale(-1);
+      const disc =
+        wounds.length >= MAX_WOUNDS
+          ? wounds.shift()!
+          : CreateDisc(
+              `${cfg.model}_wound`,
+              { radius: 0.07 + Math.random() * 0.05, tessellation: 8 },
+              scene,
+            );
+      disc.material = woundMat;
+      disc.isPickable = false;
+      disc.parent = null;
+      disc.position.copyFrom(hit.pickedPoint.add(normal.scale(0.01)));
+      disc.lookAt(disc.position.add(normal)); // disc faces along the surface normal
+      disc.computeWorldMatrix(true); // setParent keeps the world pose, so both matrices must be current
+      node.computeWorldMatrix(true);
+      disc.setParent(node);
+      wounds.push(disc);
+    },
+    clearWounds() {
+      wounds.forEach((d) => d.dispose());
+      wounds.length = 0;
+    },
     /** Brief red flash (and the hit clip, if any) so hits read clearly even without sound. */
     flash() {
       flashUntil = performance.now() + 120;
