@@ -7,6 +7,7 @@ import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Prop } from '../maps/types';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { PROPS, type PropConfig } from '../config/props';
+import { windForKit } from './wind';
 import forestUrl from '../assets/environment/env_kit_forest.glb?url';
 import campUrl from '../assets/props/env_kit_camp.glb?url';
 
@@ -23,8 +24,10 @@ export async function loadProps(
   const meshes = kits.flatMap((kit) => {
     kit.addAllToScene();
     // Double-sided foliage: light the back faces too instead of rendering them black.
-    for (const mat of kit.materials)
+    for (const mat of kit.materials) {
       if (!mat.backFaceCulling) (mat as PBRMaterial).twoSidedLighting = true;
+      windForKit(mat);
+    }
     return kit.meshes as Mesh[];
   });
 
