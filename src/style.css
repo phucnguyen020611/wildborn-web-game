@@ -373,6 +373,133 @@ p {
   opacity: 0.45;
 }
 
+/* Story Mode: E prompt, poultice count, loot lines */
+.hud-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  font: 700 1.25rem/1.2 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hud-bag {
+  position: absolute;
+  left: 16px;
+  bottom: 70px;
+  margin: 0;
+  color: var(--muted);
+  font: 700 1rem/1.2 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hud-toasts {
+  position: absolute;
+  right: 16px;
+  bottom: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.hud-toast {
+  margin: 0;
+  color: var(--accent-hover);
+  font: 700 1.125rem/1.2 var(--font-display);
+  letter-spacing: 0.06em;
+  animation: toast 2.6s ease-out forwards;
+}
+
+@keyframes toast {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------- Act select, bag ---------- */
+
+.acts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.act-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.act-card .act-title {
+  font-size: 1.5rem;
+}
+
+.act-card .act-boss,
+.act-card .act-status {
+  font: 400 0.95rem/1.3 var(--font-body);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--muted);
+}
+
+.act-card:disabled {
+  cursor: not-allowed;
+}
+
+.bag-items,
+.recipes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.bag-items li,
+.recipes li {
+  min-height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bag-items li.none {
+  color: var(--muted);
+}
+
+.bag-items .count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.recipes .recipe-name,
+.recipes .recipe-cost {
+  display: block;
+}
+
+#menu-craft h3 {
+  margin: 4px 0 0;
+  font: 700 1.25rem/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 #game {
   transition: filter 400ms ease-out; /* low-health desaturation */
 }

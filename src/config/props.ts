@@ -52,7 +52,8 @@ export const PROPS = {
   },
   bush: { nodes: ['Bush_Common_Flowers'], drawDistance: 70 },
   fern: { nodes: ['Fern_1'], drawDistance: near },
-  plant: { nodes: ['Plant_1', 'Plant_7'], drawDistance: near },
+  plant: { nodes: ['Plant_7'], drawDistance: near },
+  herb: { nodes: ['Plant_1'], drawDistance: 60 }, // pickup (map.pickups): the only Plant_1 on the map, so it reads as 'the herb'
   grass_tall: { nodes: ['Grass_Common_Tall', 'Grass_Wispy_Tall'], scale: 0.6, drawDistance: near }, // 1.6-1.8 m -> ~1 m
   grass_short: {
     nodes: ['Grass_Common_Short', 'Grass_Wispy_Short'],

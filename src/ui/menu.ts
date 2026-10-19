@@ -2,25 +2,28 @@ import { getLang, setLang, t, type Lang } from '../i18n';
 import { bindSettingsForm } from './settingsForm';
 import { onLoadProgress } from '../core/loading';
 
-export type Screen = 'menu' | 'pause' | 'settings' | 'end' | 'error' | null;
+export type Screen = 'menu' | 'pause' | 'settings' | 'end' | 'error' | 'acts' | 'craft' | null;
 
 export interface EndStats {
   outcome: 'won' | 'lost';
   time: number; // seconds
   hits: number;
   attacks: number;
+  unlocked?: string; // name of the act this win opened
 }
 
 const byId = (id: string) => document.getElementById(id)!;
 
 /** Shows one overlay screen at a time; `null` = in-game (HUD only). */
-export function createMenus(onPlay: () => void, onMenu: () => void) {
+export function createMenus(onPlay: () => void, onMenu: () => void, onActs: () => void) {
   const screens = {
     menu: byId('menu-main'),
     pause: byId('menu-pause'),
     settings: byId('menu-settings'),
     end: byId('menu-end'),
     error: byId('error'),
+    acts: byId('menu-acts'),
+    craft: byId('menu-craft'),
   };
   const hud = byId('hud');
   const relockHints = document.querySelectorAll<HTMLElement>('.relock-hint');
@@ -32,6 +35,9 @@ export function createMenus(onPlay: () => void, onMenu: () => void) {
   document
     .querySelectorAll('[data-action="menu"]')
     .forEach((b) => b.addEventListener('click', onMenu));
+  document
+    .querySelectorAll('[data-action="acts"]')
+    .forEach((b) => b.addEventListener('click', onActs));
 
   // Settings opens from the main or pause menu and returns to whichever opened it.
   bindSettingsForm(screens.settings);
@@ -65,7 +71,7 @@ export function createMenus(onPlay: () => void, onMenu: () => void) {
   const loading = screens.menu.querySelector<HTMLElement>('.loading')!;
   const loadingFill = loading.querySelector<HTMLElement>('.bar-fill')!;
   const loadingText = loading.querySelector<HTMLElement>('.loading-text')!;
-  const playButton = screens.menu.querySelector<HTMLButtonElement>('[data-action="play"]')!;
+  const playButton = screens.menu.querySelector<HTMLButtonElement>('[data-action="acts"]')!;
   onLoadProgress(({ done, total }) => {
     const ready = total > 0 && done === total;
     const percent = total ? Math.round((done / total) * 100) : 0;
@@ -96,6 +102,9 @@ export function createMenus(onPlay: () => void, onMenu: () => void) {
       hits: s.hits,
       attacks: s.attacks,
     });
+    const unlock = panel.querySelector<HTMLElement>('.end-unlock')!;
+    unlock.hidden = !s.unlocked;
+    if (s.unlocked) unlock.textContent = t('end.unlock', { act: s.unlocked });
     show('end');
   }
 

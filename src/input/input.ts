@@ -5,14 +5,24 @@ const BASE_SENSITIVITY = 0.002; // radians per mouse count at sensitivity 1
 const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
 /** Keyboard (by physical `code`, so WASD works on any layout) + pointer-locked mouse look. */
-export function createInput(canvas: HTMLCanvasElement) {
+export function createInput(canvas: HTMLCanvasElement, onInventory: () => void) {
   const keys = new Set<string>();
   const look = { yaw: 0, pitch: 0 };
   let attackPressed = false; // latched until the next sim step reads it
   let throwPressed = false;
+  let interactPressed = false;
+  let healPressed = false;
 
   window.addEventListener('keydown', (e) => {
-    if (isLocked()) keys.add(e.code);
+    if (!isLocked()) return;
+    keys.add(e.code);
+    if (e.repeat) return;
+    if (e.code === 'KeyE') interactPressed = true;
+    if (e.code === 'KeyQ') healPressed = true;
+    if (e.code === 'Tab') {
+      e.preventDefault(); // keep focus off the browser chrome
+      onInventory();
+    }
   });
   window.addEventListener('keyup', (e) => keys.delete(e.code));
   window.addEventListener('blur', () => keys.clear());
@@ -56,7 +66,9 @@ export function createInput(canvas: HTMLCanvasElement) {
   function command(): PlayerCommand {
     const attack = attackPressed;
     const throwIt = throwPressed;
-    attackPressed = throwPressed = false;
+    const interact = interactPressed;
+    const heal = healPressed;
+    attackPressed = throwPressed = interactPressed = healPressed = false;
     const axis = (pos: string, neg: string) => (keys.has(pos) ? 1 : 0) - (keys.has(neg) ? 1 : 0);
     return {
       moveX: axis('KeyD', 'KeyA'),
@@ -67,6 +79,8 @@ export function createInput(canvas: HTMLCanvasElement) {
       pitch: look.pitch,
       attack,
       throw: throwIt,
+      interact,
+      heal,
     };
   }
 

@@ -103,6 +103,7 @@ const camp: Prop[] = [
   at('log', -14, 4, 0),
   at('log', 14, -8, Math.PI / 2),
   at('bones', 7, 33, 2.4),
+  at('bones', -40, 42, 0.8), // gnawed remains outside the wolf den
 ];
 const colliders = [...boulders, ...camp].map(colliderFor).filter((b) => b !== null);
 
@@ -169,6 +170,22 @@ const { props, solids } = scatter(
   2,
 );
 
+// Healing herbs to gather: spread over the meadows and woods, a few near the trail, more off it.
+const herbs = scatter(
+  SIZE,
+  ground,
+  [...colliders, ...solids],
+  [
+    {
+      ids: ['herb'],
+      count: 18,
+      gap: 4,
+      where: (x, z) => dry(x, z) && open(x, z) && trail(x, z) > 1,
+    },
+  ],
+  7,
+).props.map((p) => ({ item: 'herb' as const, x: p.x, z: p.z }));
+
 export const pineValley: MapData = {
   size: SIZE,
   spawn,
@@ -176,6 +193,7 @@ export const pineValley: MapData = {
   terrain,
   water: WATER,
   paths: trails,
+  pickups: herbs,
   creatures: [
     {
       kind: 'fox',
@@ -234,6 +252,15 @@ export const pineValley: MapData = {
         { x: -36, z: 22 },
         { x: -28, z: 30 },
         { x: -38, z: 36 },
+      ],
+    },
+    // Mini-boss: the pack leader at its den in the far north-west, past the wolf pair.
+    {
+      kind: 'wolf_alpha',
+      waypoints: [
+        { x: -44, z: 44 },
+        { x: -38, z: 48 },
+        { x: -46, z: 50 },
       ],
     },
     {

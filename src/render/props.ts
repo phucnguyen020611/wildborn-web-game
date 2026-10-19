@@ -50,7 +50,8 @@ export async function loadProps(
       for (const name of cfg.nodes)
         for (const { mesh } of parts.get(name) ?? []) mesh.addLODLevel(cfg.drawDistance, null);
 
-  for (const p of props) {
+  // One node per prop, in order, so callers can hide one (a herb once it's picked).
+  return props.map((p) => {
     const cfg = PROPS[p.id] as PropConfig;
     const node = new TransformNode(p.id, scene);
     node.position.set(p.x, p.y ?? 0, p.z);
@@ -67,5 +68,6 @@ export async function loadProps(
       if (cfg.castsShadow) castShadow(inst);
     }
     node.freezeWorldMatrix();
-  }
+    return node;
+  });
 }

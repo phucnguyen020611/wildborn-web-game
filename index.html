@@ -42,6 +42,9 @@
         </div>
       </div>
       <p class="hud-spear"></p>
+      <p class="hud-prompt" hidden></p>
+      <p class="hud-bag"></p>
+      <div class="hud-toasts" aria-live="polite"></div>
     </div>
 
     <div id="debug" hidden></div>
@@ -54,8 +57,7 @@
           <div class="bar" aria-hidden="true"><div class="bar-fill"></div></div>
           <span class="loading-text hint"></span>
         </div>
-        <button class="btn btn-primary" data-action="play" data-i18n="menu.play"></button>
-        <p class="hint warn relock-hint" role="status" data-i18n="pause.relock" hidden></p>
+        <button class="btn btn-primary" data-action="acts" data-i18n="menu.play"></button>
         <button class="btn" data-action="settings" data-i18n="menu.settings"></button>
         <div class="lang" role="group" aria-labelledby="lang-label-main">
           <span id="lang-label-main" class="lang-label" data-i18n="menu.language"></span>
@@ -171,11 +173,34 @@
       </div>
     </section>
 
+    <section id="menu-acts" class="screen" hidden>
+      <div class="panel panel-wide">
+        <h2 data-i18n="acts.title"></h2>
+        <div class="acts"></div>
+        <p class="hint warn relock-hint" role="status" data-i18n="pause.relock" hidden></p>
+        <button class="btn" data-action="menu" data-i18n="settings.back"></button>
+      </div>
+    </section>
+
+    <section id="menu-craft" class="screen" hidden>
+      <div class="panel panel-wide">
+        <h2 data-i18n="bag.title"></h2>
+        <ul class="bag-items"></ul>
+        <p class="bag-spear tagline"></p>
+        <h3 data-i18n="bag.craft"></h3>
+        <ul class="recipes"></ul>
+        <button class="btn btn-primary" data-action="play" data-i18n="pause.resume"></button>
+        <p class="hint warn relock-hint" role="status" data-i18n="pause.relock" hidden></p>
+      </div>
+    </section>
+
     <section id="menu-end" class="screen" hidden>
       <div class="panel">
         <h2 class="end-title"></h2>
         <p class="end-stats tagline"></p>
+        <p class="end-unlock hint" hidden></p>
         <button class="btn btn-primary" data-action="play" data-i18n="end.retry"></button>
+        <button class="btn" data-action="acts" data-i18n="acts.title"></button>
         <button class="btn" data-action="menu" data-i18n="end.menu"></button>
       </div>
     </section>

@@ -17,32 +17,55 @@ import { CREATURES } from './config/creatures';
 import { testArena } from './maps/testArena';
 import { pineValley } from './maps/pineValley';
 import { groundAt } from './sim/terrain';
+import { renderActs } from './ui/acts';
+import { renderBag } from './ui/bag';
+import { completeAct, isUnlocked } from './core/progress';
+import { t } from './i18n';
 
-type State = 'menu' | 'playing' | 'paused' | 'ended';
+type State = 'menu' | 'playing' | 'paused' | 'bag' | 'ended';
 
 function main() {
   applyI18n();
   const canvas = document.getElementById('game') as HTMLCanvasElement;
-  const input = createInput(canvas);
+  const input = createInput(canvas, openBag);
   let state: State = 'menu';
 
   const audio = createAudio();
+  async function play() {
+    audio.unlock(); // must happen inside the click gesture
+    if (state === 'ended') restart();
+    try {
+      await input.lock();
+    } catch {
+      menus.showRelockHint();
+    }
+  }
   const menus = createMenus(
-    async () => {
-      audio.unlock(); // must happen inside the click gesture
-      if (state === 'ended') restart();
-      try {
-        await input.lock();
-      } catch {
-        menus.showRelockHint();
-      }
-    },
+    play,
     () => {
       restart();
       state = 'menu';
       menus.show('menu');
     },
+    () => {
+      // Act select. Only act 1 is built (docs/STORY_MODE.md); entering an act starts it fresh.
+      renderActs(document.getElementById('menu-acts')!, () => {
+        restart();
+        state = 'menu';
+        void play();
+      });
+      menus.show('acts');
+    },
   );
+
+  /** Tab: pause into the bag to craft; Resume re-locks the pointer and play continues. */
+  function openBag() {
+    if (state !== 'playing') return;
+    state = 'bag';
+    document.exitPointerLock();
+    renderBag(document.getElementById('menu-craft')!, world);
+    menus.show('craft');
+  }
 
   if (!document.createElement('canvas').getContext('webgl2')) {
     menus.show('error');
@@ -77,10 +100,20 @@ function main() {
   const trail = world.creatures.map((c) => ({ x: c.state.x, z: c.state.z })); // where each last dripped
   if (import.meta.env.DEV)
     Object.assign(window, { scene: renderer.scene, renderer, views, world, prev, input, map }); // console inspection
-  if (map.props)
-    loadProps(renderer.scene, map.props, renderer.castShadow).catch((err) =>
-      console.error('Failed to load props', err),
-    );
+  // Herbs are props too; their nodes are hidden once picked.
+  const herbs = (map.pickups ?? []).map((p, i) => ({
+    id: 'herb' as const,
+    x: p.x,
+    y: groundAt(map, p.x, p.z),
+    z: p.z,
+    rot: i * 2.4,
+    scale: 1,
+  }));
+  let herbNodes: { setEnabled(on: boolean): void }[] = [];
+  loadProps(renderer.scene, [...(map.props ?? []), ...herbs], renderer.castShadow).then(
+    (nodes) => (herbNodes = nodes.slice(nodes.length - herbs.length)),
+    (err) => console.error('Failed to load props', err),
+  );
   world.creatures.forEach((c, i) =>
     loadCreature(renderer.scene, CREATURES[c.kind], renderer.castShadow).then(
       (v) => (views[i] = v),
@@ -155,14 +188,25 @@ function main() {
           audio.play('sfx_hurt');
           renderer.shake();
           hud.hurt();
+        } else if (e.type === 'loot') {
+          audio.play('sfx_pickup', e.at);
+          hud.loot(e.items);
+        } else if (e.type === 'heal') {
+          audio.play('sfx_pickup');
         } else if (e.type === 'end') {
           state = 'ended';
           document.exitPointerLock();
+          let unlocked: string | undefined;
+          if (e.outcome === 'won' && map === pineValley) {
+            if (!isUnlocked('act2')) unlocked = t('act.act2.title');
+            completeAct('act1');
+          }
           menus.showEnd({
             outcome: e.outcome,
             time: world.time,
             hits: world.hits,
             attacks: world.attacks,
+            unlocked,
           });
         } else if (e.type === 'hit') {
           audio.play(e.killed ? 'sfx_kill' : 'sfx_hit', e.at);
@@ -187,7 +231,8 @@ function main() {
     },
     (alpha) => {
       world.creatures.forEach((c, i) => views[i]?.update(prev.creatures[i], c.state, alpha));
-      hud.update(world);
+      hud.update(world, map);
+      herbNodes.forEach((n, i) => n.setEnabled(!world.taken[i]));
       audio.heartbeat(state === 'playing' ? lowHealth(world.playerHp) : 0);
       renderer.viewmodel.update(world.spear);
       renderer.thrownSpear.update(prev.thrown, world.thrown, alpha);

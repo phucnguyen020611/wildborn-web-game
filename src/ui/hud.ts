@@ -1,6 +1,8 @@
 import { PLAYER } from '../config/player';
 import { CREATURES } from '../config/creatures';
-import type { World } from '../sim/world';
+import { nearestInteractable, type World } from '../sim/world';
+import type { MapData } from '../maps/types';
+import type { Inventory } from '../config/items';
 import { t } from '../i18n';
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -23,8 +25,19 @@ export function createHud() {
   const playerFill = $('.hud-player .bar-fill');
   const hpValue = $('.hud-hp-value');
   const spear = $('.hud-spear');
+  const prompt = $('.hud-prompt');
+  const bag = $('.hud-bag');
+  const toasts = $('.hud-toasts');
   let markerTimer = 0;
-  let last = { hp: -1, targetHp: -1, held: null as boolean | null, engaged: false };
+  let last = {
+    hp: -1,
+    target: -1,
+    targetHp: -1,
+    held: null as boolean | null,
+    engaged: false,
+    prompt: '',
+    poultice: -1,
+  };
 
   function setBar(bar: HTMLElement, fill: HTMLElement, value: number, max: number) {
     fill.style.transform = `scaleX(${value / max})`;
@@ -32,7 +45,7 @@ export function createHud() {
   }
 
   return {
-    update(w: World) {
+    update(w: World, map: MapData) {
       if (w.playerHp !== last.hp) {
         setBar(playerBar, playerFill, w.playerHp, PLAYER.hp);
         hpValue.textContent = String(Math.ceil(w.playerHp));
@@ -42,27 +55,62 @@ export function createHud() {
         const k = lowHealth(w.playerHp); // the world drains of colour as you near death
         canvas.style.filter = k > 0 ? `saturate(${1 - 0.8 * k})` : '';
       }
-      // The target bar appears once the fight starts, so it doesn't spoil the hunt.
-      const { kind, state } = w.creatures[w.target];
+      // The bar shows the animal you last hit (while it lives), else the boss once the fight starts.
+      const focus =
+        w.lastHit >= 0 && w.creatures[w.lastHit].state.mode !== 'dead' ? w.lastHit : w.target;
+      const { kind, state } = w.creatures[focus];
       const maxHp = CREATURES[kind].hp;
       const engaged = state.hp < maxHp || state.angry;
-      if (engaged !== last.engaged) {
+      if (engaged !== last.engaged || focus !== last.target) {
         target.hidden = !engaged;
         targetName.dataset.i18n = `creature.${kind}`;
         targetName.textContent = t(targetName.dataset.i18n);
       }
-      if (state.hp !== last.targetHp) setBar(targetBar, targetFill, state.hp, maxHp);
+      if (state.hp !== last.targetHp || focus !== last.target)
+        setBar(targetBar, targetFill, state.hp, maxHp);
       if (w.spear.held !== last.held) {
         spear.dataset.i18n = w.spear.held ? 'hud.spear_held' : 'hud.spear_thrown';
         spear.textContent = t(spear.dataset.i18n);
         spear.classList.toggle('away', !w.spear.held);
       }
-      last = { hp: w.playerHp, targetHp: state.hp, held: w.spear.held, engaged };
+      const near = nearestInteractable(w, map);
+      const text = !near
+        ? ''
+        : near.kind === 'pickup'
+          ? t('prompt.herb')
+          : t('prompt.skin', { name: t(`creature.${w.creatures[near.index].kind}`) });
+      if (text !== last.prompt) {
+        prompt.hidden = !text;
+        prompt.textContent = text;
+      }
+      if (w.inventory.poultice !== last.poultice)
+        bag.textContent = t('hud.bag', { n: w.inventory.poultice });
+      last = {
+        hp: w.playerHp,
+        target: focus,
+        targetHp: focus === last.target ? state.hp : -1,
+        held: w.spear.held,
+        engaged,
+        prompt: text,
+        poultice: w.inventory.poultice,
+      };
     },
 
     /** Forces a full redraw (after a restart). */
     reset() {
-      last = { hp: -1, targetHp: -1, held: null, engaged: true };
+      last = { ...last, hp: -1, target: -1, targetHp: -1, held: null, prompt: '-', poultice: -1 };
+      toasts.replaceChildren();
+    },
+
+    /** "+2 Hide" lines that fade out on their own. */
+    loot(items: Partial<Inventory>) {
+      for (const [id, n] of Object.entries(items)) {
+        const line = document.createElement('p');
+        line.className = 'hud-toast';
+        line.textContent = t('hud.loot', { n, item: t(`item.${id}`) });
+        toasts.append(line);
+        setTimeout(() => line.remove(), 2600);
+      }
     },
 
     /** Crosshair flashes on a hit (longer and red on a kill). */
