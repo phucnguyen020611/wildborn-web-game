@@ -60,11 +60,12 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 - Mỗi model là một node đặt theo tên file gốc (ví dụ `Pine_3`). `src/config/props.ts` nối id trong game (`tree_pine`) với danh sách node làm biến thể.
 - **Normal map vỏ cây giới hạn 512²** (`build.mjs`, chỉ áp dụng cho thư mục `environment`). Đây là phần nặng nhất của kit, và từ tầm mắt người chơi không thấy khác biệt.
 - **Khoảng cách vẽ:** cây cỏ nhỏ ẩn sau 45 m, cây to sau 110 m (`drawDistance`), lúc đó sương đã che gần hết.
-- Kit đồ trại `env_kit_camp` (lều, đống lửa, khúc gỗ, gốc cây, xương ma mút, giá phơi da) do `tools/blender/make_camp.py` tạo, nặng 31 KB.
+- Kit đồ trại `env_kit_camp` (lều, đống lửa, khúc gỗ, gốc cây, xương ma mút, giá phơi da) do `tools/blender/make_camp.py` tạo, nặng 146 KB. Gỗ dùng texture vỏ cây MegaKit (512², nhân màu theo vật liệu). Da dùng texture da thuộc 256² vẽ bằng code: có vết khâu, bùn ở mép dưới và muội khói ở đỉnh lều. Than hồng phát sáng (emissive). Không dùng normal map vỏ cây: tốn thêm khoảng 250 KB mà ở kích thước đồ trại gần như không thấy.
+- **Thú** (Quaternius Ultimate Animated Animal Pack, CC0): hươu, hươu đực, sói, cáo dùng chung một rig và bộ clip. File GLB gốc xuất từ FBX2glTF nên skin không qua được bước kiểm tra, và mỗi clip bị lặp 2 lần. `tools/blender/import_animal.py` nhập vào Blender, chỉ giữ 6 clip game dùng rồi lưu `.blend`; `blender_export.py` chỉ xuất xương biến dạng. Nhờ vậy mỗi con khoảng 260 KB, so với 450 KB nếu giữ đủ clip.
 
 ## Địa hình
 
-- **Texture mặt đất** (Poly Haven, CC0): cỏ `grass_ground`, đất rừng `forest_ground_04` (lối mòn, bùn ven nước), đá `rocky_terrain_02` (sườn dốc). `TerrainMaterial` trộn 3 lớp theo bản đồ trộn 512² sinh từ độ dốc, lối mòn và mép nước (`groundWeights` trong `src/render/terrain.ts`). Mỗi texture lặp 7 m; lặp nhỏ hơn thì ảnh chụp trông lấm tấm. Màu ETC1S 1024²; normal map UASTC 512².
+- **Texture mặt đất** (Poly Haven, CC0): cỏ `grass_ground`, đất rừng `forest_ground_04` (lối mòn, bùn ven nước), đá `rocky_terrain_02` (sườn dốc). `TerrainMaterial` trộn 3 lớp theo bản đồ trộn 512² sinh từ độ dốc, lối mòn và mép nước (`groundWeights` trong `src/render/terrain.ts`). Mỗi texture lặp 7 m; lặp nhỏ hơn thì ảnh chụp trông lấm tấm. Màu ETC1S 1024²; normal map UASTC 512², **không** dùng `--normal-mode`: cờ này dời Y sang kênh alpha (RGB = X), vật liệu Babylon đọc sai nên mặt đất bị loang lổ sáng tối.
 - **Thảm cỏ GPU** (`src/render/grass.ts`): bụi 5 ngọn cong, đậm ở gốc, sáng ở ngọn; tối đa 4 bụi/m², mật độ theo lớp cỏ của bản đồ trộn nhân với noise để thành từng mảng. Thin instance theo ô 16 m; ô chỉ được dựng và hiện khi trong tầm vẽ. Mỗi ô có geometry riêng, vì các clone dùng chung geometry bị WebGL báo lỗi "vertex buffer is not big enough" và không vẽ.
 - **Gió** (`src/render/wind.ts`): plugin vật liệu đẩy đỉnh theo bình phương độ cao trong model (cây cong từ gốc, cỏ lay từ chân). Cường độ theo vật liệu: cây ~0,002, cây chết ~0,001, cỏ/hoa/lá nhỏ 0,05, thảm cỏ 0,3. Bóng đổ không lay theo (shader shadow riêng), với biên độ nhỏ thì không nhận ra.
 - **Nước** (`src/render/water.ts`): normal map gợn sóng sinh bằng code (tổng sóng sin, liền mạch), trôi theo dòng. Phản chiếu theo góc nhìn (fresnel), nhìn thẳng xuống thì thấy trong. Vừa/Cao phản chiếu phẳng (mirror 512²) bầu trời, mặt đất, cây, đá; Thấp chỉ phản chiếu bầu trời.
@@ -80,8 +81,8 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 | Nấm Laetiporus (MegaKit) | Loại nấm mọc trên thân cây, đặt dưới đất trông lạ | **Bỏ** khỏi kit |
 | Cây xoắn, bụi cây thường (MegaKit) | Texture lá `_C` là mask màu đỏ | **Chưa dùng.** Cần đổi texture khi làm vùng 2 (Rừng Xoắn) |
 | Ma mút (`make_mammoth.py`) | Khối cạnh sắc, thô so với MegaKit | **Đã làm mịn:** bề mặt bo tròn, lông xù dưới bụng, chân và ngà nhiều cạnh hơn. 5,9k đỉnh, 112 KB. Có thể thay bằng model mua (`BOSS_CANDIDATES.md`) khi có ngân sách |
-| Cáo (mẫu Khronos) | Texture kiểu thực tế, hơi lệch phong cách, giấy phép CC-BY | **Giữ tạm.** Thay bằng thú nhỏ tự dựng (hươu) khi làm bầy thú vùng 1 |
+| Cáo (mẫu Khronos) | Texture kiểu thực tế, hơi lệch phong cách, giấy phép CC-BY | **Đã thay** (2026-10-19) bằng bộ thú Quaternius: cáo, hươu, hươu đực, sói, cùng phong cách MegaKit, không còn asset CC-BY |
 | Giáo, tay | Ổn ở góc nhìn thứ nhất | **Giữ** |
 | Mặt đất | Màu trơn, phẳng | **Thay** bằng địa hình heightmap tô màu (xem trên) |
-| Đồ trại | Chưa có | **Mới:** kit `env_kit_camp` |
+| Đồ trại | Chưa có | **Mới:** kit `env_kit_camp`. Dựng lại 2026-10-19: texture vỏ cây và da, bo cạnh, thêm chi tiết |
 | Âm thanh | Thiếu tiếng gầm báo đòn, bước chân, nước chảy | **Cần tìm** nguồn CC0 (hỏi người dùng trước khi tải) |

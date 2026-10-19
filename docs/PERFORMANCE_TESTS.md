@@ -43,7 +43,7 @@ Cài KTX-Software 4.4.2, chạy lại `npm run assets`. Texture con cáo 1024² 
 
 | | WebP | KTX2 (ETC1S) |
 |---|---|---|
-| File `crt_fox.glb` | 72 KB | 76 KB |
+| File `crt_fox.glb` | 72 KB | 76 KB (bản Khronos cũ; bản Quaternius từ 2026-10-19: 267 KB) |
 | VRAM texture (ước tính) | 5,59 MB | 0,70 MB |
 
 Tải thêm 4 KB nhưng bộ nhớ GPU giảm khoảng 8 lần. Bộ giải mã KTX2 hiện tải từ `cdn.babylonjs.com` (mặc định của Babylon), cần tự host trước khi phát hành.
