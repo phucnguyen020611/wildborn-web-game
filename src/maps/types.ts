@@ -49,4 +49,5 @@ export interface MapData {
   pickups?: Pickup[];
   camps?: { x: number; z: number }[]; // camp fires: rest (E) to heal, save and set where you wake after falling; [0] = start
   tracks?: { x: number; z: number; rot: number }[]; // the boss's footprints, leading the way (decals only)
+  teams?: { x: number; z: number }[][]; // Tribal War: spawn points per team
 }
