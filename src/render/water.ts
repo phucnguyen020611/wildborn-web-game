@@ -141,7 +141,25 @@ export function createWater(
 
   const mirror = new MirrorTexture('water_mirror', 512, scene, true);
   mirror.mirrorPlane = new Plane(0, -1, 0, level);
-  mirror.renderListPredicate = (m) => m !== water && m.isEnabled() && reflects(m);
+  // The predicate runs over every mesh every refresh, so whether a mesh is worth reflecting (the right
+  // kind, and standing near the water) is worked out once per mesh.
+  const worth = new Map<number, boolean>();
+  const nearWater = (m: AbstractMesh) => {
+    if (m.getClassName() !== 'InstancedMesh') return true; // sky dome, ground
+    const p = m.getAbsolutePosition();
+    return [
+      [0, 0],
+      [12, 0],
+      [-12, 0],
+      [0, 12],
+      [0, -12],
+    ].some(([dx, dz]) => groundAt(map, p.x + dx, p.z + dz) < level + 0.3);
+  };
+  mirror.renderListPredicate = (m) => {
+    let ok = worth.get(m.uniqueId);
+    if (ok === undefined) worth.set(m.uniqueId, (ok = m !== water && reflects(m) && nearWater(m)));
+    return ok && m.isEnabled();
+  };
   mirror.level = 0.35; // water reflects part of the light; full strength looks like a mirror
   onSettings((st) => {
     const planar = st.quality !== 'low';

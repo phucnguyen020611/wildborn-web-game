@@ -12,6 +12,8 @@ import forestUrl from '../assets/environment/env_kit_forest.glb?url';
 import campUrl from '../assets/props/env_kit_camp.glb?url';
 
 const KITS = { forest: forestUrl, camp: campUrl };
+const CELL = 32; // metres
+const FAR = 160; // props without a draw distance (rocks, camp): by here the fog has swallowed them
 
 /** Loads each kit once, then places GPU instances (one draw call per mesh/material, not per prop). */
 export async function loadProps(
@@ -50,10 +52,34 @@ export async function loadProps(
       for (const name of cfg.nodes)
         for (const { mesh } of parts.get(name) ?? []) mesh.addLODLevel(cfg.drawDistance, null);
 
+  // Props are grouped into map cells per draw distance; a whole cell is switched off once the camera is
+  // out of range, so the instances in it cost nothing (not even culling). That is what lets maps be big.
+  const cells = new Map<string, { node: TransformNode; x: number; z: number; range: number }>();
+  const cellOf = (p: Prop, range: number) => {
+    const i = Math.floor(p.x / CELL);
+    const j = Math.floor(p.z / CELL);
+    const key = `${range}:${i}:${j}`;
+    let cell = cells.get(key);
+    if (!cell) {
+      const node = new TransformNode(`props_${key}`, scene);
+      cell = { node, x: (i + 0.5) * CELL, z: (j + 0.5) * CELL, range };
+      cells.set(key, cell);
+    }
+    return cell.node;
+  };
+  const reach = CELL * 0.71; // cell centre to corner
+  scene.onBeforeRenderObservable.add(() => {
+    const cam = scene.activeCamera?.globalPosition;
+    if (!cam) return;
+    for (const c of cells.values())
+      c.node.setEnabled(Math.hypot(c.x - cam.x, c.z - cam.z) - reach < c.range);
+  });
+
   // One node per prop, in order, so callers can hide one (a herb once it's picked).
   return props.map((p) => {
     const cfg = PROPS[p.id] as PropConfig;
     const node = new TransformNode(p.id, scene);
+    node.parent = cellOf(p, cfg.drawDistance ?? FAR);
     node.position.set(p.x, p.y ?? 0, p.z);
     node.rotation.y = p.rot;
     node.scaling.setAll(p.scale);

@@ -84,10 +84,27 @@ export function scatter(
   const rand = mulberry32(seed);
   const props: Prop[] = [];
   const solids: Box[] = [];
-  const clear = (x: number, z: number, r: number) =>
-    [...blockers, ...solids].every(
-      (b) => Math.abs(x - b.x) > b.w / 2 + r || Math.abs(z - b.z) > b.d / 2 + r,
+  // Boxes bucketed by the grid cells their footprint covers: a spot only checks boxes near it.
+  const CELL = 8;
+  const grid = new Map<number, Box[]>();
+  const cells = (x0: number, z0: number, x1: number, z1: number, fn: (key: number) => void) => {
+    for (let i = Math.floor(x0 / CELL); i <= Math.floor(x1 / CELL); i++)
+      for (let j = Math.floor(z0 / CELL); j <= Math.floor(z1 / CELL); j++) fn(i * 65536 + j);
+  };
+  const add = (b: Box) =>
+    cells(b.x - b.w / 2, b.z - b.d / 2, b.x + b.w / 2, b.z + b.d / 2, (k) =>
+      grid.has(k) ? grid.get(k)!.push(b) : grid.set(k, [b]),
     );
+  blockers.forEach(add);
+  const clear = (x: number, z: number, r: number) => {
+    let ok = true;
+    cells(x - r, z - r, x + r, z + r, (k) => {
+      ok &&= (grid.get(k) ?? []).every(
+        (b) => Math.abs(x - b.x) > b.w / 2 + r || Math.abs(z - b.z) > b.d / 2 + r,
+      );
+    });
+    return ok;
+  };
   for (const { ids, count, gap, where } of rules) {
     for (let tries = 0, placed = 0; placed < count && tries < count * 30; tries++) {
       const x = (rand() - 0.5) * (size - 2);
@@ -107,7 +124,10 @@ export function scatter(
       };
       props.push(p);
       const box = colliderFor(p);
-      if (box) solids.push(box);
+      if (box) {
+        solids.push(box);
+        add(box);
+      }
       placed++;
     }
   }

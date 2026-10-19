@@ -20,7 +20,7 @@ import rockUrl from '../assets/textures/ter_rocky_terrain_02_diff.ktx2?url';
 import rockNorUrl from '../assets/textures/ter_rocky_terrain_02_nor.ktx2?url';
 
 const TILE = 7; // metres per texture repeat: the photo textures read as noise when tiled smaller
-const MIX = 512; // mix map resolution over the whole map
+const MIX = 1024; // mix map resolution over the whole map (0.4 m per texel on a 400 m map)
 
 const smooth = (a: number, b: number, t: number) => {
   const k = Math.max(0, Math.min(1, (t - a) / (b - a)));

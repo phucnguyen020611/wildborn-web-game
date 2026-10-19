@@ -71,7 +71,32 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
   shadows.usePercentageCloserFiltering = true;
   shadows.bias = 0.004;
   shadows.normalBias = 0.03;
-  const castShadow = (m: AbstractMesh) => shadows.addShadowCaster(m, false);
+  // Casters are kept here and only those near the camera go into the shadow map: on a big map, walking
+  // thousands of trees through every cascade each frame costs more than drawing them. Animals (skinned,
+  // they move) always cast.
+  const casters: AbstractMesh[] = [];
+  const castShadow = (m: AbstractMesh) => casters.push(m);
+  const SHADOW_RANGE = 70; // metres; shadowMaxZ is 90, and the fog thins what is left
+  let lastX = Infinity;
+  let lastZ = Infinity;
+  let lastCount = 0;
+  scene.onBeforeRenderObservable.add(() => {
+    const p = camera.globalPosition;
+    if (Math.hypot(p.x - lastX, p.z - lastZ) < 4 && casters.length === lastCount) return;
+    lastX = p.x;
+    lastZ = p.z;
+    lastCount = casters.length;
+    const list = shadows.getShadowMap()!.renderList!;
+    list.length = 0;
+    for (const m of casters) {
+      const s = m.getBoundingInfo().boundingSphere;
+      if (
+        m.skeleton ||
+        Math.hypot(s.centerWorld.x - p.x, s.centerWorld.z - p.z) < SHADOW_RANGE + s.radiusWorld
+      )
+        list.push(m);
+    }
+  });
 
   createGround(scene, map, sky.reflection);
   createGrass(scene, map, camera);
