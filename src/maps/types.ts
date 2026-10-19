@@ -47,4 +47,6 @@ export interface MapData {
   paths?: { x: number; z: number }[][]; // trodden trails (polylines), painted as dirt
   time?: number; // hour of day 0-24 (default 10): sun position, light colour, fog
   pickups?: Pickup[];
+  camps?: { x: number; z: number }[]; // camp fires: rest (E) to heal, save and set where you wake after falling; [0] = start
+  tracks?: { x: number; z: number; rot: number }[]; // the boss's footprints, leading the way (decals only)
 }

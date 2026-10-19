@@ -253,3 +253,43 @@ describe('stepWorld gathering and crafting', () => {
     });
   });
 });
+
+describe('stepWorld camps', () => {
+  const camped: MapData = {
+    ...map,
+    camps: [
+      { x: 0, z: -1 },
+      { x: 20, z: 0 },
+    ],
+    creatures: [{ kind: 'wolf_alpha', waypoints: [{ x: 0, z: 6 }] }],
+  };
+
+  it('resting at a fire heals and sets the respawn camp; falling wakes you there, boss healed', () => {
+    const w = createWorld(camped);
+    w.playerHp = 20;
+    stepWorld(w, { ...cmd(), interact: true }, camped, DT);
+    expect(w.events).toContainEqual({ type: 'rest', camp: 0 });
+    expect(w.playerHp).toBe(PLAYER.hp);
+
+    Object.assign(w.player, { x: 20, z: 1 });
+    stepWorld(w, { ...cmd(), interact: true }, camped, DT);
+    expect(w.camp).toBe(1);
+
+    w.inventory.herb = 3;
+    const alpha = w.creatures[0].state;
+    Object.assign(alpha, { hp: 10, angry: true, x: 5, z: 5 });
+    Object.assign(w.player, { x: 0, z: 0 });
+    w.playerHp = 1;
+    w.creatures[0].state.mode = 'attack';
+    w.creatures[0].state.timer = 0; // lands this step: the player falls
+    alpha.heading = Math.PI; // facing the player
+    Object.assign(alpha, { x: 0, z: 1.5 });
+    stepWorld(w, cmd(), camped, DT);
+    expect(w.outcome).toBe('playing');
+    expect(w.events).toContainEqual({ type: 'respawn', camp: 1 });
+    expect(w.player).toMatchObject({ x: 20, z: 2.5 });
+    expect(w.playerHp).toBe(PLAYER.hp);
+    expect(w.inventory.herb).toBe(3);
+    expect(alpha).toMatchObject({ hp: CREATURES.wolf_alpha.hp, angry: false, x: 0, z: 6 });
+  });
+});

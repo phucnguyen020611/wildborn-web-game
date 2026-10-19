@@ -1,5 +1,5 @@
 import { PLAYER } from '../config/player';
-import { CREATURES, type CreatureKind } from '../config/creatures';
+import { CREATURES, type CreatureConfig, type CreatureKind } from '../config/creatures';
 import { WEAPONS } from '../config/weapons';
 import {
   emptyInventory,
@@ -30,6 +30,8 @@ export type GameEvent =
   | { type: 'hurt'; damage: number } // player took damage
   | { type: 'loot'; items: Partial<Inventory>; at: Vec3 } // picked a herb or skinned a carcass
   | { type: 'heal'; amount: number }
+  | { type: 'rest'; camp: number } // rested at a camp fire: healed, saved, wakes here after falling
+  | { type: 'respawn'; camp: number } // fell and woke at the last camp
   | { type: 'end'; outcome: 'won' | 'lost' };
 
 /** A thrown spear: flying, then lying on the ground until picked up. */
@@ -64,6 +66,7 @@ export interface World {
   spearTier: number; // index into SPEAR_TIERS
   taken: boolean[]; // map.pickups already picked up
   lastHit: number; // creature most recently hit (-1 none): the HUD shows its health
+  camp: number; // index into map.camps where the hunter wakes after falling
 }
 
 export function createWorld(map: MapData): World {
@@ -92,16 +95,19 @@ export function createWorld(map: MapData): World {
     spearTier: 0,
     taken: (map.pickups ?? []).map(() => false),
     lastHit: -1,
+    camp: 0,
   };
 }
 
 /** What E would act on right now: the nearest herb or unskinned carcass in reach, or null. */
+type Interactable = { kind: 'pickup' | 'carcass' | 'camp'; index: number; dist: number };
 export function nearestInteractable(w: World, map: MapData) {
-  let best: { kind: 'pickup' | 'carcass'; index: number; dist: number } | null = null;
-  const consider = (kind: 'pickup' | 'carcass', index: number, x: number, z: number) => {
-    const dist = Math.hypot(x - w.player.x, z - w.player.z);
+  let best: Interactable | null = null;
+  const consider = (kind: Interactable['kind'], index: number, x: number, z: number, reach = 0) => {
+    const dist = Math.hypot(x - w.player.x, z - w.player.z) - reach;
     if (dist < INTERACT_RADIUS && (!best || dist < best.dist)) best = { kind, index, dist };
   };
+  (map.camps ?? []).forEach((f, i) => consider('camp', i, f.x, f.z, 1)); // the fire pit is ~1 m across
   (map.pickups ?? []).forEach((p, i) => !w.taken[i] && consider('pickup', i, p.x, p.z));
   w.creatures.forEach(
     (c, i) =>
@@ -110,7 +116,7 @@ export function nearestInteractable(w: World, map: MapData) {
       Object.keys(LOOT[c.kind]).length > 0 &&
       consider('carcass', i, c.state.x, c.state.z),
   );
-  return best as { kind: 'pickup' | 'carcass'; index: number; dist: number } | null;
+  return best as Interactable | null;
 }
 
 function addItems(w: World, items: Partial<Inventory>) {
@@ -120,6 +126,12 @@ function addItems(w: World, items: Partial<Inventory>) {
 function interact(w: World, map: MapData) {
   const t = nearestInteractable(w, map);
   if (!t) return;
+  if (t.kind === 'camp') {
+    w.playerHp = PLAYER.hp;
+    w.camp = t.index;
+    w.events.push({ type: 'rest', camp: t.index });
+    return;
+  }
   let items: Partial<Inventory>;
   let at: Vec3;
   if (t.kind === 'pickup') {
@@ -168,7 +180,7 @@ export function stepWorld(w: World, cmd: PlayerCommand, map: MapData, dt: number
 
   const impact = stepPlayer(w.player, cmd, map, dt);
   if (impact > PLAYER.safeFallSpeed)
-    hurtPlayer(w, (impact - PLAYER.safeFallSpeed) * PLAYER.fallDamage);
+    hurtPlayer(w, map, (impact - PLAYER.safeFallSpeed) * PLAYER.fallDamage);
   const before = w.spear.phase;
   const released = stepSpear(w.spear, cfg, cmd.attack, cmd.throw, dt);
   if (before !== 'windup' && w.spear.phase === 'windup') {
@@ -236,15 +248,46 @@ export function stepWorld(w: World, cmd: PlayerCommand, map: MapData, dt: number
       map,
       dt,
     );
-    if (dmg > 0) hurtPlayer(w, dmg);
+    if (dmg > 0) hurtPlayer(w, map, dmg);
   });
 }
 
-function hurtPlayer(w: World, dmg: number) {
+function hurtPlayer(w: World, map: MapData, dmg: number) {
   if (w.outcome !== 'playing') return;
   w.playerHp = Math.max(0, w.playerHp - dmg);
   w.events.push({ type: 'hurt', damage: dmg });
-  if (w.playerHp === 0) end(w, 'lost');
+  if (w.playerHp > 0) return;
+  if (map.camps?.length) respawn(w, map);
+  else end(w, 'lost');
+}
+
+/** Puts the hunter beside camp fire `i`, facing it is up to the camera. */
+export function placeAtCamp(w: World, map: MapData, i: number) {
+  const f = map.camps![i];
+  const x = f.x;
+  const z = f.z + 2.5;
+  Object.assign(w.player, { x, y: groundAt(map, x, z), z, vx: 0, vy: 0, vz: 0, onGround: true });
+}
+
+/**
+ * Falling on a map with camps: wake at the last camp with full health and everything carried. Kills
+ * stay dead; the bosses heal and go home, and every animal forgets its anger.
+ */
+function respawn(w: World, map: MapData) {
+  placeAtCamp(w, map, w.camp);
+  w.playerHp = PLAYER.hp;
+  w.thrown = null;
+  Object.assign(w.spear, createSpear());
+  w.lastHit = -1;
+  w.creatures.forEach((c, i) => {
+    if (c.state.mode === 'dead') return;
+    const cfg: CreatureConfig = CREATURES[c.kind];
+    if (cfg.boss || cfg.miniBoss) {
+      Object.assign(c.state, createCreature(map.creatures[i].waypoints, cfg));
+      c.state.y = groundAt(map, c.state.x, c.state.z);
+    } else Object.assign(c.state, { angry: false, mode: 'walk', cooldown: 0, stagger: 0 });
+  });
+  w.events.push({ type: 'respawn', camp: w.camp });
 }
 
 function end(w: World, outcome: 'won' | 'lost') {
