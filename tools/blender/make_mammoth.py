@@ -1,6 +1,9 @@
-# Builds the stylized woolly mammoth boss: soft lumpy fur masses (smooth shaded), a rigid-skinned armature
-# (each part follows one bone) and keyframed clips: idle, walk, run, attack, hit, death.
-#   blender -b --factory-startup --python tools/blender/make_mammoth.py -- art-source/creatures/crt_mammoth.blend
+# Builds the woolly mammoth boss, modelled on museum reconstructions (Royal BC Museum model, skeletal
+# diagrams, Mauricio Antón's restorations): a tall domed head with a dip behind it, a shoulder hump, the back
+# sloping down to low hips, columnar legs, small ears, a long trunk, huge tusks that sweep down, out, up
+# and in, and a curtain of long shaggy hair. One smooth skin (metaballs) plus hanging hair locks, skinned
+# smoothly to the rig by distance to each bone; keyframed clips: idle, walk, run, attack, hit, death.
+#   blender -b --factory-startup --python tools/blender/make_mammoth.py -- art-source/creatures/crt_mammoth.blend [preview.png]
 # Convention: metres, origin between the feet, faces -Y in Blender (= glTF +Z, the game's "forward").
 # Clip timings must match the creature config in src/config/creatures.ts (attack wind-up especially).
 import math
@@ -9,122 +12,247 @@ import sys
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Vector, noise
+from mathutils.kdtree import KDTree
 
-out = sys.argv[sys.argv.index("--") + 1 :][0]
+args = sys.argv[sys.argv.index("--") + 1 :]
+out = args[0]
+preview = args[1] if len(args) > 1 else None
 random.seed(11)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 scene.render.fps = 30
+K = 0.575  # an isolated metaball element of radius 1 ends up 0.575 m in radius (measured)
 
 
-def material(name, srgb, roughness=0.95):
+def material(name, roughness, back=True):
+    """Colour comes from the mesh's vertex colours (fur shading is painted per vertex below)."""
     m = bpy.data.materials.new(name)
-    lin = (*(c**2.2 for c in srgb), 1)
-    bsdf = m.node_tree.nodes["Principled BSDF"]
-    bsdf.inputs["Base Color"].default_value = lin
+    nodes, links = m.node_tree.nodes, m.node_tree.links
+    bsdf = nodes["Principled BSDF"]
     bsdf.inputs["Roughness"].default_value = roughness
     bsdf.inputs["Metallic"].default_value = 0
-    m.diffuse_color = lin
+    attr = nodes.new("ShaderNodeVertexColor")
+    attr.layer_name = "Col"
+    links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
+    m.use_backface_culling = back  # hair locks are single sheets: seen from both sides
     return m
 
 
-FUR = material("mammoth_fur", (0.42, 0.29, 0.18))
-FUR_DARK = material("mammoth_fur_dark", (0.30, 0.20, 0.13))
-SKIN = material("mammoth_skin", (0.28, 0.24, 0.22))
-IVORY = material("mammoth_ivory", (0.88, 0.83, 0.72), roughness=0.6)
-
-parts = []  # (object, bone name)
+FUR = material("mammoth_fur", 0.95)
+LOCKS = material("mammoth_locks", 0.95, back=False)
+IVORY = material("mammoth_ivory", 0.45)
+EYE = material("mammoth_eye", 0.25)
 
 
-def finish(bm, name, mat, bone, smooth=True):
-    mesh = bpy.data.meshes.new(name)
-    bm.to_mesh(mesh)
-    bm.free()
-    for p in mesh.polygons:
-        # Smooth sides; n-gon caps (tube ends) stay flat, which also keeps their edges crisp.
-        p.use_smooth = smooth and len(p.vertices) <= 4
-    mesh.materials.append(mat)
-    obj = bpy.data.objects.new(name, mesh)
+def link(obj):
     scene.collection.objects.link(obj)
-    parts.append((obj, bone))
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
     return obj
 
 
-def blob(name, mat, bone, center, radii, subdiv=4, jitter=0.06, shag=0.0):
-    """Soft, lumpy ellipsoid: smooth low-frequency bumps read as fur masses; `shag` adds ragged tufts."""
-    bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=subdiv, radius=1.0)
-    k = [random.uniform(0, 6.28) for _ in range(3)]
-    for v in bm.verts:
-        n = v.co.normalized()
-        lump = math.sin(5 * n.x + k[0]) * math.sin(4 * n.y + k[1]) * math.sin(6 * n.z + k[2])
-        ragged = random.uniform(-shag, shag) if n.z < 0.2 else 0  # tufts only on the lower half
-        v.co = Vector((n.x * radii[0], n.y * radii[1], n.z * radii[2])) * (1 + jitter * lump + ragged)
-        v.co += Vector(center)
-    return finish(bm, name, mat, bone)
+# ---------- skin: one smooth surface from overlapping metaballs ----------
+mb = bpy.data.metaballs.new("mammoth_skin")
+mb.resolution = 0.07
+mb.threshold = 0.6
 
 
-def tube(name, mat, bone, a, b, r_a, r_b, segments=14, jitter=0.0):
-    """Tapered cylinder from point a to point b."""
-    a, b = Vector(a), Vector(b)
-    bm = bmesh.new()
-    bmesh.ops.create_cone(bm, cap_ends=True, segments=segments, radius1=r_a, radius2=r_b, depth=(b - a).length)
-    rot = (b - a).to_track_quat("Z", "Y").to_matrix().to_4x4()
-    for v in bm.verts:
-        v.co.z += (b - a).length / 2  # cone is centred; move its base to the origin
-        v.co = rot @ v.co + a
-        if jitter:
-            v.co += Vector([random.uniform(-jitter, jitter) for _ in range(3)])
-    return finish(bm, name, mat, bone)
+def ell(center, radii):
+    e = mb.elements.new(type="ELLIPSOID")
+    e.co = center
+    e.radius = 1.0
+    e.size_x, e.size_y, e.size_z = (r / K for r in radii)
 
 
-def curve_tube(name, mat, bone, points, r_start, r_end, segments=12):
-    """Chain of tubes through `points`, tapering from r_start to r_end (tusks, trunk tip)."""
-    n = len(points) - 1
-    for i in range(n):
-        r0 = r_start + (r_end - r_start) * i / n
-        r1 = r_start + (r_end - r_start) * (i + 1) / n
-        tube(f"{name}_{i}", mat, bone, points[i], points[i + 1], r0, r1 * 1.02 if i < n - 1 else r1, segments)
+def chain(points, r0, r1, step=0.12):
+    """Balls every `step` along a polyline, radius r0 -> r1 (legs, trunk, tail)."""
+    pts = [Vector(p) for p in points]
+    total = sum((b - a).length for a, b in zip(pts, pts[1:]))
+    d = 0.0
+    for a, b in zip(pts, pts[1:]):
+        seg = (b - a).length
+        n = max(1, int(seg / step))
+        for i in range(n):
+            t = (d + seg * i / n) / total
+            e = mb.elements.new(type="BALL")
+            e.co = a + (b - a) * (i / n)
+            e.radius = (r0 + (r1 - r0) * t) / K
+        d += seg
+    e = mb.elements.new(type="BALL")
+    e.co = pts[-1]
+    e.radius = r1 / K
 
 
-# ---------- body (faces -Y) ----------
-blob("body", FUR, "body", (0, 0.1, 2.15), (1.15, 1.9, 1.25))
-blob("belly_fur", FUR_DARK, "body", (0, 0.1, 1.55), (1.05, 1.75, 0.55), jitter=0.1, shag=0.12)  # shaggy hanging fur
-blob("hump", FUR_DARK, "body", (0, -0.75, 2.95), (0.95, 0.95, 0.75))
-blob("rump", FUR, "body", (0, 1.45, 2.05), (0.95, 0.75, 1.0))
-blob("head", FUR_DARK, "head", (0, -2.05, 2.95), (0.72, 0.75, 0.85))
-blob("cheeks", FUR, "head", (0, -2.2, 2.55), (0.62, 0.55, 0.5))
+# Torso: deep chest and shoulders, a hump behind the neck, back sloping down to a narrower rump.
+ell((0, 1.4, 2.0), (0.82, 0.72, 0.82))  # rump
+ell((0, 0.65, 2.15), (0.95, 0.85, 0.92))  # loins
+ell((0, 0.05, 1.95), (0.98, 1.05, 0.85))  # belly
+ell((0, -0.6, 2.2), (0.98, 0.8, 1.0))  # chest
+ell((0, -0.8, 2.85), (0.7, 0.65, 0.55))  # shoulder hump
+ell((0, -1.3, 2.62), (0.6, 0.45, 0.56))  # neck (lower than hump and dome: the dip)
+# Head: tall dome, sloping forehead, heavy cheeks.
+ell((0, -1.82, 3.2), (0.54, 0.52, 0.7))  # dome: the highest point
+ell((0, -2.2, 2.6), (0.48, 0.42, 0.62))  # face
+ell((0, -2.0, 2.2), (0.46, 0.45, 0.32))  # jaw and cheeks
 for s in (-1, 1):
-    blob(f"ear_{s}", SKIN, "head", (0.62 * s, -1.85, 3.05), (0.12, 0.3, 0.35), subdiv=3, jitter=0.1)
-    blob(f"eye_{s}", SKIN, "head", (0.5 * s, -2.55, 2.95), (0.07, 0.07, 0.07), subdiv=3, jitter=0.0)
-    curve_tube(  # tusk: curves down, forward, then up and inward
-        f"tusk_{s}", IVORY, "head",
-        [(0.32 * s, -2.55, 2.4), (0.45 * s, -2.95, 1.9), (0.5 * s, -3.45, 1.7), (0.4 * s, -3.85, 1.95), (0.18 * s, -3.95, 2.35)],
-        0.15, 0.05,
-    )
-
-# Trunk: three segments, each on its own bone so it can curl and sway.
-TRUNK = [(0, -2.72, 2.55), (0, -3.0, 1.85), (0, -3.08, 1.2), (0, -3.0, 0.55)]
-tube("trunk_0", FUR_DARK, "trunk.1", TRUNK[0], TRUNK[1], 0.28, 0.21, jitter=0.02)
-tube("trunk_1", SKIN, "trunk.2", TRUNK[1], TRUNK[2], 0.21, 0.15, jitter=0.015)
-tube("trunk_2", SKIN, "trunk.3", TRUNK[2], TRUNK[3], 0.15, 0.11, jitter=0.01)
-
-# Legs: upper and lower on separate bones; the lower ends in a wide foot.
-LEGS = {"FL": (-0.62, -0.95), "FR": (0.62, -0.95), "BL": (-0.6, 1.25), "BR": (0.6, 1.25)}
+    ell((0.5 * s, -1.65, 2.95), (0.1, 0.2, 0.24))  # small ears
+# Legs: columns, the front ones longer (the shoulders stand higher than the hips).
+LEGS = {"FL": (-0.55, -0.72), "FR": (0.55, -0.72), "BL": (-0.52, 1.3), "BR": (0.52, 1.3)}
 for leg, (x, y) in LEGS.items():
-    tube(f"leg_{leg}_up", FUR, f"leg.{leg}.up", (x, y, 1.95), (x, y, 0.95), 0.42, 0.33, jitter=0.04)
-    tube(f"leg_{leg}_low", FUR_DARK, f"leg.{leg}.low", (x, y, 0.98), (x, y, 0.12), 0.33, 0.3, jitter=0.03)
-    tube(f"foot_{leg}", SKIN, f"leg.{leg}.low", (x, y, 0.16), (x, y, 0.0), 0.36, 0.36)
+    top = 2.0 if leg[0] == "F" else 1.85
+    knee = 1.0 if leg[0] == "F" else 0.95
+    chain([(x, y, top), (x, y + 0.04, knee)], 0.4, 0.31)
+    chain([(x, y + 0.04, knee), (x, y, 0.2)], 0.3, 0.27)
+    ell((x, y - 0.03, 0.14), (0.31, 0.32, 0.15))  # wide flat foot
+# Trunk: thick at the face, tapering, hanging near the ground with a slight forward curl at the tip.
+TRUNK = [(0, -2.5, 2.45), (0, -2.72, 1.75), (0, -2.8, 1.05), (0, -2.74, 0.4), (0, -2.9, 0.25)]
+chain(TRUNK, 0.25, 0.09, step=0.07)
+chain([(0, 2.1, 2.3), (0, 2.3, 1.85), (0, 2.35, 1.5)], 0.08, 0.05, step=0.06)  # short tail
 
-tube("tail_0", FUR, "tail", (0, 2.1, 2.45), (0, 2.35, 1.75), 0.1, 0.06)
-blob("tail_tuft", FUR_DARK, "tail", (0, 2.38, 1.65), (0.12, 0.12, 0.18), subdiv=3, shag=0.2)
+skin_src = link(bpy.data.objects.new("skin", mb))
+bpy.ops.object.convert(target="MESH")
+skin = bpy.context.active_object
+
+# Fur clumps: low-frequency lumps along the surface, then decimate to a game budget.
+bm = bmesh.new()
+bm.from_mesh(skin.data)
+bm.normal_update()
+for v in bm.verts:
+    p = v.co
+    clump = noise.noise(Vector((p.x * 3, p.y * 3, p.z * 1.2)))
+    v.co += v.normal * 0.035 * clump
+bm.to_mesh(skin.data)
+bm.free()
+dec = skin.modifiers.new("decimate", "DECIMATE")
+dec.ratio = min(1.0, 6500 / len(skin.data.vertices))
+bpy.ops.object.modifier_apply(modifier=dec.name)
+for p in skin.data.polygons:
+    p.use_smooth = True
+skin.data.materials.append(FUR)
+
+
+def fur_colour(p, n):
+    """Ginger-brown on the back, dark underneath and down the legs, near-black feet and trunk tip."""
+    up = max(0.0, min(1.0, (p.z - 1.0) / 2.2))
+    streak = 0.5 + 0.5 * noise.noise(Vector((p.x * 9, p.y * 9, p.z * 1.5)))
+    top = Vector((0.5, 0.29, 0.15))
+    low = Vector((0.2, 0.12, 0.07))
+    c = low.lerp(top, up * (0.6 + 0.4 * max(0.0, n.z)))
+    c *= 0.82 + 0.3 * streak
+    if p.z < 0.3:  # feet and the trunk's end: bare dark skin
+        c = c.lerp(Vector((0.13, 0.11, 0.1)), (0.3 - p.z) / 0.3)
+    return c
+
+
+# ---------- hair locks: hanging tapered strips, longest on the flanks and belly ----------
+locks = bmesh.new()
+kd_src = skin.data.vertices
+candidates = [v for v in kd_src if v.co.z > 0.7 and v.co.y > -2.3]  # everywhere but the face, trunk and feet
+random.shuffle(candidates)
+lock_roots = []
+count = 0  # bmesh vertex indices follow creation order
+for v in candidates[:1700]:
+    root, n = v.co.copy(), v.normal.copy()
+    hang = max(0.0, min(1.0, (2.6 - root.z) / 1.6))  # 0 on the back .. 1 low on the flanks
+    length = (0.14 + 0.62 * hang) * random.uniform(0.7, 1.2)  # short on the back, a skirt on the flanks
+    width = random.uniform(0.08, 0.14)
+    down = Vector((0, 0, -1)).lerp(n, 0.25 - 0.15 * hang).normalized()
+    side = n.cross(down).normalized() * width
+    rings = []
+    for i in range(4):
+        t = i / 3
+        sway = Vector((math.sin(root.y * 7 + i), math.cos(root.x * 7 + i), 0)) * 0.03 * t
+        c = root - n * 0.04 + down * length * t + n * 0.05 * t * (1 - t) + sway
+        half = side * (1 - t * 0.85)
+        rings.append((locks.verts.new(c - half), locks.verts.new(c + half)))
+    for (a0, a1), (b0, b1) in zip(rings, rings[1:]):
+        locks.faces.new((a0, a1, b1, b0))
+    lock_roots.append((root, n, list(range(count, count + 8))))
+    count += 8
+locks_mesh = bpy.data.meshes.new("locks")
+locks.to_mesh(locks_mesh)
+locks.free()
+locks_obj = link(bpy.data.objects.new("locks", locks_mesh))
+for p in locks_mesh.polygons:
+    p.use_smooth = True
+locks_mesh.materials.append(LOCKS)
+
+
+# ---------- tusks: down and forward, sweeping out, then up and in until the tips nearly meet ----------
+TUSK = [(0.3, -2.3, 2.3), (0.55, -2.75, 1.75), (0.95, -3.2, 1.62), (1.08, -3.58, 2.12), (0.75, -3.7, 2.75), (0.36, -3.52, 3.05)]
+
+
+def tusk_point(s, t):
+    """Catmull-Rom through TUSK (mirrored for the left tusk), t in 0..1."""
+    pts = [Vector((x * s, y, z)) for x, y, z in TUSK]
+    pts = [pts[0] * 2 - pts[1]] + pts + [pts[-1] * 2 - pts[-2]]
+    f = t * (len(TUSK) - 1)
+    i = min(int(f), len(TUSK) - 2)
+    u = f - i
+    p0, p1, p2, p3 = pts[i : i + 4]
+    return 0.5 * (2 * p1 + (p2 - p0) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (3 * p1 - p0 - 3 * p2 + p3) * u**3)
+
+
+tusk_bm = bmesh.new()
+for s in (-1, 1):
+    seg, around = 40, 12
+    rings = []
+    for i in range(seg + 1):
+        t = i / seg
+        c = tusk_point(s, t)
+        ahead = (tusk_point(s, min(1, t + 0.01)) - tusk_point(s, max(0, t - 0.01))).normalized()
+        u = ahead.cross(Vector((0, 0, 1))).normalized()
+        w = u.cross(ahead)
+        r = 0.17 * (1 - t) ** 0.6 + 0.012
+        rings.append([tusk_bm.verts.new(c + (u * math.cos(a) + w * math.sin(a)) * r)
+                      for a in (2 * math.pi * k / around for k in range(around))])
+    for ra, rb in zip(rings, rings[1:]):
+        for k in range(around):
+            tusk_bm.faces.new((ra[k], ra[(k + 1) % around], rb[(k + 1) % around], rb[k]))
+    tusk_bm.faces.new(list(reversed(rings[0])))
+tusk_mesh = bpy.data.meshes.new("tusks")
+tusk_bm.to_mesh(tusk_mesh)
+tusk_bm.free()
+tusk_obj = link(bpy.data.objects.new("tusks", tusk_mesh))
+for p in tusk_mesh.polygons:
+    p.use_smooth = True
+tusk_mesh.materials.append(IVORY)
+
+eye_bm = bmesh.new()
+for s in (-1, 1):
+    m = bmesh.ops.create_uvsphere(eye_bm, u_segments=8, v_segments=6, radius=0.045)
+    for v in m["verts"]:
+        v.co += Vector((0.43 * s, -2.35, 2.82))
+eye_mesh = bpy.data.meshes.new("eyes")
+eye_bm.to_mesh(eye_mesh)
+eye_bm.free()
+eye_obj = link(bpy.data.objects.new("eyes", eye_mesh))
+eye_mesh.materials.append(EYE)
+
+
+def paint(obj, colour):
+    attr = obj.data.color_attributes.new("Col", "BYTE_COLOR", "POINT")
+    for i, v in enumerate(obj.data.vertices):
+        c = colour(v)
+        attr.data[i].color_srgb = (c.x, c.y, c.z, 1.0)
+
+
+paint(skin, lambda v: fur_colour(v.co, v.normal))
+lock_colour = {}
+for root, n, verts in lock_roots:
+    base = fur_colour(root, n) * 0.92
+    for k, vi in enumerate(verts):
+        lock_colour[vi] = base * (1.0 - 0.12 * (k // 2) / 3)  # a little darker toward the tips
+paint(locks_obj, lambda v: lock_colour.get(v.index, Vector((0.25, 0.15, 0.08))))
+paint(tusk_obj, lambda v: Vector((0.62, 0.5, 0.36)).lerp(Vector((0.9, 0.85, 0.74)), min(1.0, max(0.0, (v.co.y + 2.5) / -0.9))))
+paint(eye_obj, lambda v: Vector((0.03, 0.02, 0.02)))
 
 # ---------- armature ----------
 arm_data = bpy.data.armatures.new("mammoth_rig")
 arm = bpy.data.objects.new("crt_mammoth_rig", arm_data)
-scene.collection.objects.link(arm)
-bpy.context.view_layer.objects.active = arm
+link(arm)
 bpy.ops.object.mode_set(mode="EDIT")
 
 
@@ -138,31 +266,64 @@ def bone(name, head, tail, parent=None):
 
 
 bone("root", (0, 0, 0), (0, -1, 0))  # along the facing axis: rolling it tips the animal onto its side
-bone("body", (0, 1.0, 2.2), (0, -1.0, 2.3), "root")
-bone("head", (0, -1.55, 2.95), (0, -2.5, 2.95), "body")
+bone("body", (0, 1.2, 2.15), (0, -1.0, 2.45), "root")
+bone("head", (0, -1.45, 2.85), (0, -2.35, 2.75), "body")
 bone("trunk.1", TRUNK[0], TRUNK[1], "head")
 bone("trunk.2", TRUNK[1], TRUNK[2], "trunk.1")
-bone("trunk.3", TRUNK[2], TRUNK[3], "trunk.2")
-bone("tail", (0, 2.1, 2.45), (0, 2.35, 1.75), "body")
+bone("trunk.3", TRUNK[2], TRUNK[4], "trunk.2")
+bone("tail", (0, 2.1, 2.3), (0, 2.35, 1.5), "body")
 for leg, (x, y) in LEGS.items():
-    bone(f"leg.{leg}.up", (x, y, 1.95), (x, y, 0.97), "body")
-    bone(f"leg.{leg}.low", (x, y, 0.97), (x, y, 0.0), f"leg.{leg}.up")
+    top = 2.0 if leg[0] == "F" else 1.85
+    knee = 1.0 if leg[0] == "F" else 0.95
+    bone(f"leg.{leg}.up", (x, y, top), (x, y + 0.04, knee), "body")
+    bone(f"leg.{leg}.low", (x, y + 0.04, knee), (x, y, 0.0), f"leg.{leg}.up")
+segments = {b.name: (b.head.copy(), b.tail.copy()) for b in arm_data.edit_bones if b.name != "root"}
 bpy.ops.object.mode_set(mode="OBJECT")
 
-# Rigid skinning: every vertex of a part fully follows its bone. Then merge into one mesh.
-for obj, b in parts:
-    vg = obj.vertex_groups.new(name=b)
-    vg.add(range(len(obj.data.vertices)), 1.0, "REPLACE")
+
+def seg_dist(p, a, b):
+    ab = b - a
+    t = max(0.0, min(1.0, (p - a).dot(ab) / ab.length_squared))
+    return (p - (a + ab * t)).length
+
+
+def skin_smooth(obj, positions=None):
+    """Weights by inverse distance to each bone segment, the nearest three blended: soft joints."""
+    groups = {name: obj.vertex_groups.new(name=name) for name in segments}
+    for v in obj.data.vertices:
+        p = positions[v.index] if positions else v.co
+        near = sorted((seg_dist(p, a, b), name) for name, (a, b) in segments.items())[:3]
+        ws = [(1.0 / (d**4 + 1e-4), name) for d, name in near]
+        total = sum(w for w, _ in ws)
+        for w, name in ws:
+            groups[name].add([v.index], w / total, "REPLACE")
+
+
+def skin_rigid(obj, name):
+    obj.vertex_groups.new(name=name).add(range(len(obj.data.vertices)), 1.0, "REPLACE")
+
+
+skin_smooth(skin)
+# Each lock follows the skin where it grows, so hair moves with the leg or body under it.
+lock_pos = {}
+for root, n, verts in lock_roots:
+    for vi in verts:
+        lock_pos[vi] = root
+skin_smooth(locks_obj, lock_pos)
+skin_rigid(tusk_obj, "head")
+skin_rigid(eye_obj, "head")
+
 bpy.ops.object.select_all(action="DESELECT")
-for obj, _ in parts:
-    obj.select_set(True)
-mesh_obj = parts[0][0]
-bpy.context.view_layer.objects.active = mesh_obj
+for o in (skin, locks_obj, tusk_obj, eye_obj):
+    o.select_set(True)
+bpy.context.view_layer.objects.active = skin
 bpy.ops.object.join()
+mesh_obj = skin
 mesh_obj.name = mesh_obj.data.name = "crt_mammoth"
 mesh_obj.parent = arm
 mod = mesh_obj.modifiers.new("Armature", "ARMATURE")
 mod.object = arm
+print("mammoth verts:", len(mesh_obj.data.vertices))
 
 # ---------- animation clips ----------
 pose = arm.pose.bones
@@ -270,5 +431,25 @@ clip("Attack", 42, attack)
 clip("Hit", 9, hit)
 clip("Death", 45, death)
 arm.animation_data.action = bpy.data.actions["Idle"]
+
+if preview:
+    # Side, three-quarter and front views under a sun, to compare against the reference photos.
+    bpy.ops.object.light_add(type="SUN", rotation=(0.8, 0.3, 0.9))
+    bpy.context.active_object.data.energy = 4
+    scene.world = bpy.data.worlds.new("w")
+    scene.world.color = (0.55, 0.6, 0.65)
+    scene.render.resolution_x, scene.render.resolution_y = 900, 600
+    bpy.ops.object.camera_add()
+    cam = bpy.context.active_object
+    scene.camera = cam
+    cam.data.lens = 35
+    for name, loc in (("side", (13, -0.5, 2.4)), ("three_quarter", (8.5, -9, 2.6)), ("front", (1.5, -12, 2.4))):
+        cam.location = loc
+        cam.rotation_euler = (Vector((0, -0.8, 1.9)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
+        scene.render.filepath = preview.replace(".png", f"_{name}.png")
+        bpy.ops.render.render(write_still=True)
+    bpy.data.objects.remove(cam)
+    for o in [o for o in bpy.data.objects if o.type == "LIGHT"]:
+        bpy.data.objects.remove(o)
 
 bpy.ops.wm.save_as_mainfile(filepath=out)
