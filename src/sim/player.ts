@@ -13,6 +13,8 @@ export interface PlayerCommand {
   pitch: number; // radians, positive looks down (Babylon convention)
   attack: boolean; // attack pressed since the last step
   throw: boolean; // throw pressed since the last step
+  interact?: boolean; // E pressed since the last step: pick up / skin what's in reach
+  heal?: boolean; // Q pressed since the last step: use a poultice
 }
 
 /** Feet position (world y, the terrain is not flat). */

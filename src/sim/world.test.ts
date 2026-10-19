@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createWorld, stepWorld, type World } from './world';
+import { canCraft, craft, createWorld, nearestInteractable, stepWorld, type World } from './world';
 import type { PlayerCommand } from './player';
 import type { MapData } from '../maps/types';
 import { CREATURES } from '../config/creatures';
@@ -189,5 +189,67 @@ describe('stepWorld combat', () => {
     }
     expect(w.playerHp).toBeLessThan(PLAYER.hp);
     expect(events.some((e) => e.type === 'hurt')).toBe(true);
+  });
+});
+
+describe('stepWorld gathering and crafting', () => {
+  const herbs: MapData = {
+    ...map,
+    creatures: [],
+    pickups: [
+      { item: 'herb', x: 0, z: 1 },
+      { item: 'herb', x: 1, z: 0 },
+      { item: 'herb', x: 20, z: 20 }, // out of reach
+    ],
+  };
+  const press = (w: World, m: MapData, extra: Partial<PlayerCommand>) =>
+    stepWorld(w, { ...cmd(), ...extra }, m, DT);
+
+  it('E picks up the nearest herb in reach, once; herbs make a poultice; Q heals with it', () => {
+    const w = createWorld(herbs);
+    press(w, herbs, { interact: true });
+    press(w, herbs, { interact: true });
+    press(w, herbs, { interact: true }); // nothing left in reach
+    expect(w.inventory.herb).toBe(2);
+    expect(w.taken).toEqual([true, true, false]);
+    expect(nearestInteractable(w, herbs)).toBeNull();
+
+    expect(craft(w, 'poultice')).toBe(true);
+    expect(w.inventory).toMatchObject({ herb: 0, poultice: 1 });
+    expect(craft(w, 'poultice')).toBe(false);
+
+    press(w, herbs, { heal: true }); // full health: the poultice is kept
+    expect(w.inventory.poultice).toBe(1);
+    w.playerHp = 30;
+    press(w, herbs, { heal: true });
+    expect(w.playerHp).toBe(70);
+    expect(w.inventory.poultice).toBe(0);
+    expect(w.events).toContainEqual({ type: 'heal', amount: 40 });
+  });
+
+  it('a dead animal can be skinned once; spear tips go in order and raise damage', () => {
+    const w = createWorld(map);
+    const hits = Math.ceil(CREATURES.fox.hp / WEAPONS.spear.damage);
+    for (let i = 0; i < hits; i++) thrust(w);
+    expect(fox(w).mode).toBe('dead');
+    // The win froze the world; skin it anyway by resuming play.
+    w.outcome = 'playing';
+    for (let i = 0; i < 10; i++) step(w); // let the hit freeze pass
+    stepWorld(w, { ...cmd(), interact: true }, map, DT);
+    expect(w.inventory.hide).toBe(1);
+    expect(w.creatures[0].looted).toBe(true);
+
+    Object.assign(w.inventory, { bone: 5, hide: 1, alpha_fang: 1 });
+    expect(canCraft(w, 'fang_tip')).toBe(false); // needs the bone tip first
+    expect(craft(w, 'bone_tip')).toBe(true);
+    expect(craft(w, 'fang_tip')).toBe(true);
+    expect(w.spearTier).toBe(2);
+
+    const v = createWorld(map);
+    v.spearTier = 2;
+    const events = thrust(v);
+    expect(events.find((e) => e.type === 'hit')).toMatchObject({
+      damage: WEAPONS.spear.damage * 1.6,
+    });
   });
 });

@@ -1,6 +1,7 @@
 import type { PropId } from '../config/props';
 import type { CreatureKind } from '../config/creatures';
 import type { Terrain } from '../sim/terrain';
+import type { ItemId } from '../config/items';
 
 /** Box standing on y (default 0): center (x, z), size (w, d), height h. */
 export interface Box {
@@ -28,6 +29,13 @@ export interface CreatureSpawn {
   waypoints: { x: number; z: number }[]; // spawns at the first, then patrols the loop
 }
 
+/** Something lying on the ground to pick up with E (herbs). */
+export interface Pickup {
+  item: ItemId;
+  x: number;
+  z: number;
+}
+
 export interface MapData {
   size: number; // square arena edge length, centered on origin
   spawn: { x: number; z: number };
@@ -38,4 +46,5 @@ export interface MapData {
   water?: number; // water surface height, if the map has any
   paths?: { x: number; z: number }[][]; // trodden trails (polylines), painted as dirt
   time?: number; // hour of day 0-24 (default 10): sun position, light colour, fog
+  pickups?: Pickup[];
 }

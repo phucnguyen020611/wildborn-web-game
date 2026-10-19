@@ -1,6 +1,17 @@
 import { PLAYER } from '../config/player';
 import { CREATURES, type CreatureKind } from '../config/creatures';
 import { WEAPONS } from '../config/weapons';
+import {
+  emptyInventory,
+  INTERACT_RADIUS,
+  LOOT,
+  POULTICE_HEAL,
+  RECIPES,
+  SPEAR_TIERS,
+  type Inventory,
+  type ItemId,
+  type RecipeId,
+} from '../config/items';
 import type { MapData } from '../maps/types';
 import { overlapsBox } from './collision';
 import { boxTop, groundAt } from './terrain';
@@ -17,6 +28,8 @@ export type GameEvent =
   | { type: 'strike'; at: Vec3; ground: boolean } // thrust stopped by the ground or a solid prop
   | { type: 'pickup' }
   | { type: 'hurt'; damage: number } // player took damage
+  | { type: 'loot'; items: Partial<Inventory>; at: Vec3 } // picked a herb or skinned a carcass
+  | { type: 'heal'; amount: number }
   | { type: 'end'; outcome: 'won' | 'lost' };
 
 /** A thrown spear: flying, then lying on the ground until picked up. */
@@ -30,6 +43,7 @@ export interface Projectile extends Vec3 {
 export interface Creature {
   kind: CreatureKind;
   state: CreatureState;
+  looted: boolean; // carcass already skinned
 }
 
 /** Everything the simulation owns. Render reads it; only stepWorld writes it. */
@@ -46,13 +60,17 @@ export interface World {
   hits: number; // attacks that connected
   hitstop: number; // seconds left of the freeze after a hit
   events: GameEvent[]; // produced by the last step, for presentation (sound, shake, hit marker)
+  inventory: Inventory;
+  spearTier: number; // index into SPEAR_TIERS
+  taken: boolean[]; // map.pickups already picked up
+  lastHit: number; // creature most recently hit (-1 none): the HUD shows its health
 }
 
 export function createWorld(map: MapData): World {
   const creatures = map.creatures.map((sp) => {
     const state = createCreature(sp.waypoints, CREATURES[sp.kind]);
     state.y = groundAt(map, state.x, state.z);
-    return { kind: sp.kind, state };
+    return { kind: sp.kind, state, looted: false };
   });
   return {
     player: createPlayer(map),
@@ -70,7 +88,70 @@ export function createWorld(map: MapData): World {
     hits: 0,
     hitstop: 0,
     events: [],
+    inventory: emptyInventory(),
+    spearTier: 0,
+    taken: (map.pickups ?? []).map(() => false),
+    lastHit: -1,
   };
+}
+
+/** What E would act on right now: the nearest herb or unskinned carcass in reach, or null. */
+export function nearestInteractable(w: World, map: MapData) {
+  let best: { kind: 'pickup' | 'carcass'; index: number; dist: number } | null = null;
+  const consider = (kind: 'pickup' | 'carcass', index: number, x: number, z: number) => {
+    const dist = Math.hypot(x - w.player.x, z - w.player.z);
+    if (dist < INTERACT_RADIUS && (!best || dist < best.dist)) best = { kind, index, dist };
+  };
+  (map.pickups ?? []).forEach((p, i) => !w.taken[i] && consider('pickup', i, p.x, p.z));
+  w.creatures.forEach(
+    (c, i) =>
+      c.state.mode === 'dead' &&
+      !c.looted &&
+      Object.keys(LOOT[c.kind]).length > 0 &&
+      consider('carcass', i, c.state.x, c.state.z),
+  );
+  return best as { kind: 'pickup' | 'carcass'; index: number; dist: number } | null;
+}
+
+function addItems(w: World, items: Partial<Inventory>) {
+  for (const [id, n] of Object.entries(items)) w.inventory[id as ItemId] += n;
+}
+
+function interact(w: World, map: MapData) {
+  const t = nearestInteractable(w, map);
+  if (!t) return;
+  let items: Partial<Inventory>;
+  let at: Vec3;
+  if (t.kind === 'pickup') {
+    const p = map.pickups![t.index];
+    w.taken[t.index] = true;
+    items = { [p.item]: 1 };
+    at = { x: p.x, y: groundAt(map, p.x, p.z), z: p.z };
+  } else {
+    const c = w.creatures[t.index];
+    c.looted = true;
+    items = LOOT[c.kind];
+    at = { x: c.state.x, y: c.state.y, z: c.state.z };
+  }
+  addItems(w, items);
+  w.events.push({ type: 'loot', items, at });
+}
+
+/** Whether the hunter has the materials (and the spear tier below) for a recipe. */
+export function canCraft(w: World, id: RecipeId) {
+  const r = RECIPES[id];
+  const tierOk = !('spearTier' in r) || w.spearTier === r.spearTier - 1;
+  return tierOk && Object.entries(r.cost).every(([item, n]) => w.inventory[item as ItemId] >= n);
+}
+
+/** Crafts from the inventory (called by the UI while paused). Returns false if it can't. */
+export function craft(w: World, id: RecipeId) {
+  if (!canCraft(w, id)) return false;
+  const r = RECIPES[id];
+  for (const [item, n] of Object.entries(r.cost)) w.inventory[item as ItemId] -= n;
+  if ('gives' in r) addItems(w, r.gives);
+  if ('spearTier' in r) w.spearTier = r.spearTier;
+  return true;
 }
 
 const cfg = WEAPONS.spear;
@@ -99,6 +180,14 @@ export function stepWorld(w: World, cmd: PlayerCommand, map: MapData, dt: number
     w.events.push({ type: 'throw' });
   }
 
+  if (cmd.interact) interact(w, map);
+  if (cmd.heal && w.inventory.poultice > 0 && w.playerHp < PLAYER.hp) {
+    const amount = Math.min(POULTICE_HEAL, PLAYER.hp - w.playerHp);
+    w.inventory.poultice--;
+    w.playerHp += amount;
+    w.events.push({ type: 'heal', amount });
+  }
+
   const eye = { x: w.player.x, y: w.player.y + PLAYER.eyeHeight, z: w.player.z };
   const dir = viewDir(cmd);
 
@@ -108,7 +197,7 @@ export function stepWorld(w: World, cmd: PlayerCommand, map: MapData, dt: number
     const i = firstHit(w, eye, tip);
     if (i >= 0) {
       w.spear.hit = true;
-      hit(w, i, cfg.damage, tip);
+      hit(w, i, cfg.damage * SPEAR_TIERS[w.spearTier], tip);
     } else {
       const solid = firstSolid(map, eye, dir, cfg.reach);
       if (solid) {
@@ -172,7 +261,7 @@ function stepProjectile(w: World, s: Projectile, map: MapData, dt: number) {
 
   const i = firstHit(w, prev, s);
   if (i >= 0) {
-    hit(w, i, cfg.throwDamage, { x: s.x, y: s.y, z: s.z });
+    hit(w, i, cfg.throwDamage * SPEAR_TIERS[w.spearTier], { x: s.x, y: s.y, z: s.z });
     land(w, s, s, map);
     return;
   }
@@ -199,6 +288,7 @@ function hit(w: World, i: number, damage: number, at: Vec3) {
   const c = w.creatures[i];
   const killed = damageCreature(c.state, CREATURES[c.kind], damage);
   w.hits++;
+  w.lastHit = i;
   w.events.push({ type: 'hit', creature: i, damage, killed, at });
   w.hitstop = cfg.hitstop;
   if (killed && i === w.target) end(w, 'won');
