@@ -416,6 +416,10 @@ p {
   animation: toast 2.6s ease-out forwards;
 }
 
+.hud-toast.notice {
+  color: var(--text);
+}
+
 @keyframes toast {
   0%,
   70% {

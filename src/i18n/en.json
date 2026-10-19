@@ -73,5 +73,8 @@
   "hud.bag": "Poultice {n} · Q to use",
   "hud.loot": "+{n} {item}",
   "end.unlock": "Unlocked {act}",
-  "creature.wolf_alpha": "Alpha wolf"
+  "creature.wolf_alpha": "Alpha wolf",
+  "prompt.camp": "E · Rest at camp (heal, save)",
+  "hud.rested": "Rested at camp · Saved",
+  "hud.respawn": "You fell… and woke at camp"
 }

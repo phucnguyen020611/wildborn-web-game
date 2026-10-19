@@ -22,6 +22,7 @@ import type { PlayerState } from '../sim/player';
 import { createSpearViewmodel, createThrownSpear } from './viewmodel';
 import { createMotion } from './motion';
 import { createEffects } from './effects';
+import { createLandmarks } from './landmarks';
 
 // Per preset: cap devicePixelRatio (Retina/4K), optionally render below native, and sun shadow cascades
 // (0 = no shadows): more cascades keep near shadows sharp while still covering the distance.
@@ -100,6 +101,7 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
 
   createGround(scene, map, sky.reflection);
   createGrass(scene, map, camera);
+  createLandmarks(scene, map);
 
   const rockMat = new StandardMaterial('rock', scene);
   rockMat.diffuseColor = new Color3(0.45, 0.4, 0.34);

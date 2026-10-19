@@ -7,7 +7,7 @@ import { createInput } from './input/input';
 import { createRenderer } from './render/scene';
 import { createDebugOverlay } from './debug/overlay';
 import { createBench } from './debug/bench';
-import { createWorld, stepWorld } from './sim/world';
+import { createWorld, placeAtCamp, stepWorld } from './sim/world';
 import type { PlayerCommand } from './sim/player';
 import { createHud, lowHealth } from './ui/hud';
 import { createAudio } from './audio/audio';
@@ -19,7 +19,7 @@ import { pineValley } from './maps/pineValley';
 import { groundAt } from './sim/terrain';
 import { renderActs } from './ui/acts';
 import { renderBag } from './ui/bag';
-import { completeAct, isUnlocked } from './core/progress';
+import { completeAct, isUnlocked, loadBag, saveBag } from './core/progress';
 import { t } from './i18n';
 
 type State = 'menu' | 'playing' | 'paused' | 'bag' | 'ended';
@@ -123,6 +123,14 @@ function main() {
 
   function restart() {
     Object.assign(world, createWorld(map));
+    // Story map: pick up where the last rest left off (bag, spear, camp to start from).
+    const bag = map.camps && loadBag('act1');
+    if (bag) {
+      Object.assign(world.inventory, bag.inventory);
+      world.spearTier = bag.spearTier;
+      world.camp = Math.min(bag.camp, map.camps!.length - 1);
+      placeAtCamp(world, map, world.camp);
+    }
     Object.assign(prev.player, world.player);
     world.creatures.forEach((c, i) => Object.assign(prev.creatures[i], c.state));
     prev.thrown = null;
@@ -193,6 +201,18 @@ function main() {
           hud.loot(e.items);
         } else if (e.type === 'heal') {
           audio.play('sfx_pickup');
+        } else if (e.type === 'rest') {
+          audio.play('sfx_pickup');
+          saveBag('act1', {
+            inventory: { ...world.inventory },
+            spearTier: world.spearTier,
+            camp: e.camp,
+          });
+          hud.notice(t('hud.rested'));
+        } else if (e.type === 'respawn') {
+          Object.assign(prev.player, world.player);
+          prev.thrown = null;
+          hud.notice(t('hud.respawn'));
         } else if (e.type === 'end') {
           state = 'ended';
           document.exitPointerLock();

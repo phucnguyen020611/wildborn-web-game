@@ -76,9 +76,11 @@ export function createHud() {
       const near = nearestInteractable(w, map);
       const text = !near
         ? ''
-        : near.kind === 'pickup'
-          ? t('prompt.herb')
-          : t('prompt.skin', { name: t(`creature.${w.creatures[near.index].kind}`) });
+        : near.kind === 'camp'
+          ? t('prompt.camp')
+          : near.kind === 'pickup'
+            ? t('prompt.herb')
+            : t('prompt.skin', { name: t(`creature.${w.creatures[near.index].kind}`) });
       if (text !== last.prompt) {
         prompt.hidden = !text;
         prompt.textContent = text;
@@ -100,6 +102,15 @@ export function createHud() {
     reset() {
       last = { ...last, hp: -1, target: -1, targetHp: -1, held: null, prompt: '-', poultice: -1 };
       toasts.replaceChildren();
+    },
+
+    /** One line of news (rested, woke at camp) in the loot column. */
+    notice(text: string) {
+      const line = document.createElement('p');
+      line.className = 'hud-toast notice';
+      line.textContent = text;
+      toasts.append(line);
+      setTimeout(() => line.remove(), 2600);
     },
 
     /** "+2 Hide" lines that fade out on their own. */
