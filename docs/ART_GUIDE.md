@@ -73,6 +73,12 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 - Màu đất tô theo đỉnh (vertex color): cỏ, cỏ khô theo noise, đất dọc lối mòn, đá ở sườn dốc, bùn sát nước. Thêm một texture lốm đốm lặp lại mỗi 4 m để mặt đất không trông như nhựa.
 - Vật thể đặt trên dốc lấy **điểm thấp nhất dưới chân** (`seat` trong `src/maps/scatter.ts`) để không bị hở chân.
 
+## Tribal War (team deathmatch)
+
+- **Chiến binh** (`make_warrior.py`): người Quaternius (CC0) + tóc dài, râu, khố da. Đội phân biệt bằng cả màu lẫn hình dạng (spec 13): băng đầu nhuộm màu đội (đỏ đất / xanh chàm), đội 0 cắm lông vũ, đội 1 đeo sừng xương. Bỏ normal/roughness map, nhờ vậy file còn 658 KB thay vì vài MB.
+- **Vũ khí** (`make_weapons.py`): cùng quy ước với giáo (gốc ở chỗ cầm, mũi hướng +Z). Viewmodel dùng chung tư thế tay đã bake cho giáo; rìu và dùi cui được dựng đứng hơn trong tay và chém xuống. Cung chưa có tay cầm, vì tư thế tay bake sẵn chỉ cầm được cán hướng thẳng ra trước.
+- **Vật phẩm nhặt được** (thảo dược, xác thú chưa lột) phát sáng vàng nhấp nháy để dễ nhận ra giữa cây cỏ.
+
 ## Hiệu ứng trúng đòn
 
 - **Vết đâm** (`src/render/effects.ts`): khi mũi giáo chạm đất hoặc vật cản mà không trúng thú, mô phỏng phát sự kiện `strike`. Vết được đặt theo tia nhìn của người chơi (vật cản trong mô phỏng chỉ là hộp, thân cây thật có thể lệch so với hộp). Mỗi bề mặt một kiểu vết, nhận biết qua tên vật liệu: đá bị mẻ kèm vết rạn và văng vụn; gỗ nứt dọc thớ, lộ gỗ tươi và văng dăm; đất thủng lỗ, đất văng quanh; da rách; xương mẻ. Tối đa 60 vết, vết cũ nhất bị dùng lại.
