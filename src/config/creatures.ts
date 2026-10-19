@@ -16,9 +16,11 @@ export interface CreatureConfig {
   attackCooldown: number;
   hitbox: { length: number; radius: number; height: number }; // capsule along heading, centered at `height`
   boss: boolean; // killing it wins the hunt
+  miniBoss?: boolean; // guards a rare drop; gets a health bar like the boss
   // Presentation (render only)
   model: string; // file in src/assets/creatures/<model>.glb
   scale: number; // model units -> meters
+  tint?: number; // multiplies the model's colours (< 1 darker): tells a variant apart from its kin
   animations: {
     idle: string;
     walk: string;
@@ -82,6 +84,38 @@ export const CREATURES = {
     boss: false,
     model: 'crt_wolf',
     scale: 0.32,
+    animations: {
+      idle: 'Idle',
+      walk: 'Walk',
+      run: 'Gallop',
+      attack: 'Attack',
+      hit: 'Idle_HitReact_Left',
+      death: 'Death',
+    },
+  },
+  // Act 1 mini-boss: the pack leader, bigger and tougher, guarding its den off the main trail. Drops its fang.
+  wolf_alpha: {
+    radius: 0.7,
+    walkSpeed: 1.8,
+    runSpeed: 7.4,
+    turnRate: 4,
+    fleeDistance: 0,
+    aggroDistance: 14,
+    idleTime: 3,
+    hp: 320,
+    staggerTime: 0.2,
+    fightsBack: true,
+    attackRange: 2.4,
+    attackReachGrace: 0.6,
+    attackWindup: 0.55,
+    attackDamage: 24,
+    attackCooldown: 1.4,
+    hitbox: { length: 1.9, radius: 0.5, height: 0.85 },
+    boss: false,
+    miniBoss: true,
+    model: 'crt_wolf',
+    scale: 0.46,
+    tint: 0.3, // near-black coat
     animations: {
       idle: 'Idle',
       walk: 'Walk',

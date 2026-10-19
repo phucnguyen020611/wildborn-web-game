@@ -108,6 +108,7 @@ export async function loadCreature(
   let playing: AnimationGroup | null = null;
 
   const materials = container.materials as PBRMaterial[];
+  if (cfg.tint) materials.forEach((m) => m.albedoColor.scaleInPlace(cfg.tint!));
   let flashUntil = 0;
   const glow = new Color3(); // per creature: materials keep a reference to it
 
