@@ -52,7 +52,7 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 - Script trong `tools/blender/` sinh file `.blend` vào `art-source/`. Mở file `.blend` trong Blender để chỉnh tay; chỉ chạy lại script khi muốn làm lại từ đầu, vì chạy lại sẽ ghi đè các chỉnh sửa tay.
 - **Giáo** (`make_spear.py`): gốc tọa độ ở chỗ cầm, giáo nằm dọc trục +Z của Blender (tức +Y của glTF), mũi ở Z = 1,3.
 - **Tay** (`make_fp_arms.py`): được đặt sẵn trong khung tọa độ của giáo, nên trong game chỉ cần gắn làm con của giáo. Mesh gốc bị cắt ở cánh tay trên. Script kéo dài chỗ cắt về điểm `SHOULDER` nằm sau camera rồi bịt kín, nên khi đâm (tay lao lên 0,3 m) không lộ phần hở. Nếu đổi `REST` trong `src/render/viewmodel.ts` thì phải đổi `REST_POS` trong script và chạy lại.
-- **Ma mút** (`make_mammoth.py`): mặt trước hướng −Y trong Blender (+Z trong glTF), gốc tọa độ giữa 4 chân. Mỗi bộ phận gắn cứng vào một xương (không skin mềm). Thời gian báo đòn trong clip `Attack` (0,7 s) phải khớp `attackWindup` trong `src/config/creatures.ts`.
+- **Ma mút** (`make_mammoth.py`): mặt trước hướng −Y trong Blender (+Z trong glTF), gốc tọa độ giữa 4 chân. Dáng theo phục dựng bảo tàng (mô hình Royal BC Museum, sơ đồ xương, tranh của Mauricio Antón): đầu vòm cao nhất, gáy trũng, bướu vai, lưng dốc xuống mông thấp, chân trước dài hơn, tai nhỏ, vòi gần chạm đất, ngà chĩa xuống rồi cong ra ngoài, vòng lên và chụm vào. Da liền một khối (metaball), có thêm khoảng 1.700 dải lông rủ (dài nhất ở sườn và bụng). Màu tô theo đỉnh: lưng nâu đỏ, bụng và chân tối hơn. Skin mềm theo khoảng cách tới từng xương. Khoảng 21k đỉnh, 294 KB. Thời gian báo đòn trong clip `Attack` (0,7 s) phải khớp `attackWindup` trong `src/config/creatures.ts`.
 
 ## Bộ kit môi trường
 
@@ -68,10 +68,15 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 - **Texture mặt đất** (Poly Haven, CC0): cỏ `grass_ground`, đất rừng `forest_ground_04` (lối mòn, bùn ven nước), đá `rocky_terrain_02` (sườn dốc). `TerrainMaterial` trộn 3 lớp theo bản đồ trộn 512² sinh từ độ dốc, lối mòn và mép nước (`groundWeights` trong `src/render/terrain.ts`). Mỗi texture lặp 7 m; lặp nhỏ hơn thì ảnh chụp trông lấm tấm. Màu ETC1S 1024²; normal map UASTC 512², **không** dùng `--normal-mode`: cờ này dời Y sang kênh alpha (RGB = X), vật liệu Babylon đọc sai nên mặt đất bị loang lổ sáng tối.
 - **Thảm cỏ GPU** (`src/render/grass.ts`): bụi 5 ngọn cong, đậm ở gốc, sáng ở ngọn; tối đa 4 bụi/m², mật độ theo lớp cỏ của bản đồ trộn nhân với noise để thành từng mảng. Thin instance theo ô 16 m; ô chỉ được dựng và hiện khi trong tầm vẽ. Mỗi ô có geometry riêng, vì các clone dùng chung geometry bị WebGL báo lỗi "vertex buffer is not big enough" và không vẽ.
 - **Gió** (`src/render/wind.ts`): plugin vật liệu đẩy đỉnh theo bình phương độ cao trong model (cây cong từ gốc, cỏ lay từ chân). Cường độ theo vật liệu: cây ~0,002, cây chết ~0,001, cỏ/hoa/lá nhỏ 0,05, thảm cỏ 0,3. Bóng đổ không lay theo (shader shadow riêng), với biên độ nhỏ thì không nhận ra.
-- **Nước** (`src/render/water.ts`): normal map gợn sóng sinh bằng code (tổng sóng sin, liền mạch), trôi theo dòng. Phản chiếu theo góc nhìn (fresnel), nhìn thẳng xuống thì thấy trong. Vừa/Cao phản chiếu phẳng (mirror 512²) bầu trời, mặt đất, cây, đá; Thấp chỉ phản chiếu bầu trời.
+- **Nước** (`src/render/water.ts`): mesh lưới 0,5 m, chỉ phủ chỗ đất thấp hơn mặt nước. Màu và độ trong theo độ sâu (`waterTint`): mép bờ có vệt bọt nhạt, chỗ cạn trong và ánh màu đáy, chỗ sâu tối. Normal map gợn sóng sinh bằng code (tổng sóng sin, liền mạch), trôi theo dòng. Phản chiếu theo góc nhìn (fresnel), nhìn thẳng xuống thì thấy trong. Vừa/Cao phản chiếu phẳng (mirror 512²) bầu trời, mặt đất, cây, đá; Thấp chỉ phản chiếu bầu trời.
 - Map có thể có **heightmap** (`src/sim/terrain.ts`): lưới độ cao 1 m, dùng chung cho mô phỏng (người chơi, thú, giáo ném bám theo dốc) và mesh hiển thị.
 - Màu đất tô theo đỉnh (vertex color): cỏ, cỏ khô theo noise, đất dọc lối mòn, đá ở sườn dốc, bùn sát nước. Thêm một texture lốm đốm lặp lại mỗi 4 m để mặt đất không trông như nhựa.
 - Vật thể đặt trên dốc lấy **điểm thấp nhất dưới chân** (`seat` trong `src/maps/scatter.ts`) để không bị hở chân.
+
+## Hiệu ứng trúng đòn
+
+- **Vết đâm** (`src/render/effects.ts`): khi mũi giáo chạm đất hoặc vật cản mà không trúng thú, mô phỏng phát sự kiện `strike`. Vết được đặt theo tia nhìn của người chơi (vật cản trong mô phỏng chỉ là hộp, thân cây thật có thể lệch so với hộp). Mỗi bề mặt một kiểu vết, nhận biết qua tên vật liệu: đá bị mẻ kèm vết rạn và văng vụn; gỗ nứt dọc thớ, lộ gỗ tươi và văng dăm; đất thủng lỗ, đất văng quanh; da rách; xương mẻ. Tối đa 60 vết, vết cũ nhất bị dùng lại.
+- **Máu**: tia máu vệt dài (particle kéo giãn theo hướng bay) phun ra phía sau con thú và dội về phía người đâm, thêm một làn sương đỏ. Vết máu loang có giọt bắn xung quanh, rơi trên đất theo hướng đâm. Vết thương trên thân thú có lỗ đen ở giữa, viền đỏ ướt và dòng máu chảy xuống dưới. Thú bị thương để lại vệt máu nhỏ giọt sau mỗi khoảng 0,9 m, giúp lần theo dấu.
 
 ## Kiểm kê asset (2026-10-16)
 
@@ -80,7 +85,7 @@ Sương mù cùng màu chân trời, nên cây ở xa nhạt dần vào trời t
 | Cây, đá, cỏ, hoa, sỏi (MegaKit) | Đúng phong cách. Texture từng bị lặp giữa các file | **Giữ.** Đã gộp thành kit dùng chung texture, thêm biến thể: 5 cây thường, 5 thông, 3 cây chết, 2 loại cỏ, đá lối mòn |
 | Nấm Laetiporus (MegaKit) | Loại nấm mọc trên thân cây, đặt dưới đất trông lạ | **Bỏ** khỏi kit |
 | Cây xoắn, bụi cây thường (MegaKit) | Texture lá `_C` là mask màu đỏ | **Chưa dùng.** Cần đổi texture khi làm vùng 2 (Rừng Xoắn) |
-| Ma mút (`make_mammoth.py`) | Khối cạnh sắc, thô so với MegaKit | **Đã làm mịn:** bề mặt bo tròn, lông xù dưới bụng, chân và ngà nhiều cạnh hơn. 5,9k đỉnh, 112 KB. Có thể thay bằng model mua (`BOSS_CANDIDATES.md`) khi có ngân sách |
+| Ma mút (`make_mammoth.py`) | Khối cạnh sắc, thô so với MegaKit | **Dựng lại 2026-10-19** theo ảnh phục dựng thật: da liền khối, lông rủ, ngà cong lớn. 21k đỉnh, 294 KB. Có thể thay bằng model mua (`BOSS_CANDIDATES.md`) khi có ngân sách |
 | Cáo (mẫu Khronos) | Texture kiểu thực tế, hơi lệch phong cách, giấy phép CC-BY | **Đã thay** (2026-10-19) bằng bộ thú Quaternius: cáo, hươu, hươu đực, sói, cùng phong cách MegaKit, không còn asset CC-BY |
 | Giáo, tay | Ổn ở góc nhìn thứ nhất | **Giữ** |
 | Mặt đất | Màu trơn, phẳng | **Thay** bằng địa hình heightmap tô màu (xem trên) |
