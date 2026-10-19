@@ -45,6 +45,22 @@
       <p class="hud-prompt" hidden></p>
       <p class="hud-bag"></p>
       <div class="hud-toasts" aria-live="polite"></div>
+      <div class="tdm" hidden>
+        <div class="tdm-score" role="status">
+          <span class="tdm-team team0"
+            ><span class="tdm-mark" aria-hidden="true">▲</span
+            ><span class="tdm-points">0</span></span
+          >
+          <span class="tdm-clock">5:00</span>
+          <span class="tdm-team team1"
+            ><span class="tdm-points">0</span
+            ><span class="tdm-mark" aria-hidden="true">◆</span></span
+          >
+        </div>
+        <ul class="tdm-feed" aria-live="polite"></ul>
+        <ol class="tdm-weapons"></ol>
+        <p class="tdm-respawn" hidden></p>
+      </div>
     </div>
 
     <div id="debug" hidden></div>
@@ -57,7 +73,8 @@
           <div class="bar" aria-hidden="true"><div class="bar-fill"></div></div>
           <span class="loading-text hint"></span>
         </div>
-        <button class="btn btn-primary" data-action="acts" data-i18n="menu.play"></button>
+        <button class="btn btn-primary" data-action="acts" data-i18n="menu.story"></button>
+        <button class="btn" data-action="tdm" data-i18n="menu.tdm"></button>
         <button class="btn" data-action="settings" data-i18n="menu.settings"></button>
         <div class="lang" role="group" aria-labelledby="lang-label-main">
           <span id="lang-label-main" class="lang-label" data-i18n="menu.language"></span>

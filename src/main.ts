@@ -27,6 +27,11 @@ type State = 'menu' | 'playing' | 'paused' | 'bag' | 'ended';
 
 function main() {
   applyI18n();
+  if (new URLSearchParams(location.search).get('mode') === 'tdm') {
+    if (!document.createElement('canvas').getContext('webgl2'))
+      return void (document.getElementById('error')!.hidden = false);
+    return void import('./tdmMain').then((m) => m.runTdm());
+  }
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const input = createInput(canvas, openBag);
   let state: State = 'menu';
@@ -57,6 +62,7 @@ function main() {
       });
       menus.show('acts');
     },
+    () => (location.search = '?mode=tdm'), // Tribal War runs on its own page load (own map and simulation)
   );
 
   /** Tab: pause into the bag to craft; Resume re-locks the pointer and play continues. */

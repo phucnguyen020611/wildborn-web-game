@@ -167,5 +167,17 @@ export function createRenderer(canvas: HTMLCanvasElement, map: MapData) {
     if (bobEnabled()) shakeUntil = performance.now() + SHAKE_MS;
   }
 
-  return { engine, scene, camera, render, viewmodel, thrownSpear, effects, shake, castShadow, sky };
+  return {
+    engine,
+    scene,
+    camera,
+    render,
+    viewmodel,
+    thrownSpear,
+    effects,
+    shake,
+    castShadow,
+    sky,
+    motion: motion.out,
+  };
 }

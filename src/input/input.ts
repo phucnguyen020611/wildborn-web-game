@@ -12,6 +12,8 @@ export function createInput(canvas: HTMLCanvasElement, onInventory: () => void) 
   let throwPressed = false;
   let interactPressed = false;
   let healPressed = false;
+  let slotPressed = 0; // 1-5 pressed since the last step (Tribal War weapon keys)
+  let leftDown = false; // held: the bow draws while it is
 
   window.addEventListener('keydown', (e) => {
     if (!isLocked()) return;
@@ -19,6 +21,7 @@ export function createInput(canvas: HTMLCanvasElement, onInventory: () => void) 
     if (e.repeat) return;
     if (e.code === 'KeyE') interactPressed = true;
     if (e.code === 'KeyQ') healPressed = true;
+    if (/^Digit[1-5]$/.test(e.code)) slotPressed = Number(e.code.slice(5));
     if (e.code === 'Tab') {
       e.preventDefault(); // keep focus off the browser chrome
       onInventory();
@@ -27,13 +30,21 @@ export function createInput(canvas: HTMLCanvasElement, onInventory: () => void) 
   window.addEventListener('keyup', (e) => keys.delete(e.code));
   window.addEventListener('blur', () => keys.clear());
   document.addEventListener('pointerlockchange', () => {
-    if (!isLocked()) keys.clear();
+    if (isLocked()) return;
+    keys.clear();
+    leftDown = false;
   });
 
   canvas.addEventListener('mousedown', (e) => {
     if (!isLocked()) return;
-    if (e.button === 0) attackPressed = true;
+    if (e.button === 0) {
+      attackPressed = true;
+      leftDown = true;
+    }
     if (e.button === 2) throwPressed = true;
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 0) leftDown = false;
   });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -63,12 +74,14 @@ export function createInput(canvas: HTMLCanvasElement, onInventory: () => void) 
     }
   }
 
-  function command(): PlayerCommand {
+  function command(): PlayerCommand & { attackHeld: boolean; slot: number } {
     const attack = attackPressed;
     const throwIt = throwPressed;
     const interact = interactPressed;
     const heal = healPressed;
+    const slot = slotPressed;
     attackPressed = throwPressed = interactPressed = healPressed = false;
+    slotPressed = 0;
     const axis = (pos: string, neg: string) => (keys.has(pos) ? 1 : 0) - (keys.has(neg) ? 1 : 0);
     return {
       moveX: axis('KeyD', 'KeyA'),
@@ -81,6 +94,8 @@ export function createInput(canvas: HTMLCanvasElement, onInventory: () => void) 
       throw: throwIt,
       interact,
       heal,
+      attackHeld: leftDown,
+      slot, // 0 = no switch
     };
   }
 

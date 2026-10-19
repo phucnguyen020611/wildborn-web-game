@@ -15,7 +15,12 @@ export interface EndStats {
 const byId = (id: string) => document.getElementById(id)!;
 
 /** Shows one overlay screen at a time; `null` = in-game (HUD only). */
-export function createMenus(onPlay: () => void, onMenu: () => void, onActs: () => void) {
+export function createMenus(
+  onPlay: () => void,
+  onMenu: () => void,
+  onActs: () => void,
+  onTdm: () => void,
+) {
   const screens = {
     menu: byId('menu-main'),
     pause: byId('menu-pause'),
@@ -38,6 +43,9 @@ export function createMenus(onPlay: () => void, onMenu: () => void, onActs: () =
   document
     .querySelectorAll('[data-action="acts"]')
     .forEach((b) => b.addEventListener('click', onActs));
+  document
+    .querySelectorAll('[data-action="tdm"]')
+    .forEach((b) => b.addEventListener('click', onTdm));
 
   // Settings opens from the main or pause menu and returns to whichever opened it.
   bindSettingsForm(screens.settings);
@@ -71,15 +79,17 @@ export function createMenus(onPlay: () => void, onMenu: () => void, onActs: () =
   const loading = screens.menu.querySelector<HTMLElement>('.loading')!;
   const loadingFill = loading.querySelector<HTMLElement>('.bar-fill')!;
   const loadingText = loading.querySelector<HTMLElement>('.loading-text')!;
-  const playButton = screens.menu.querySelector<HTMLButtonElement>('[data-action="acts"]')!;
+  const playButtons = screens.menu.querySelectorAll<HTMLButtonElement>(
+    '[data-action="acts"], [data-action="tdm"]',
+  );
   onLoadProgress(({ done, total }) => {
     const ready = total > 0 && done === total;
     const percent = total ? Math.round((done / total) * 100) : 0;
     loadingFill.style.transform = `scaleX(${percent / 100})`;
     loadingText.textContent = t('loading.progress', { percent });
     loading.hidden = ready;
-    playButton.disabled = !ready;
-    if (ready && current === 'menu') playButton.focus();
+    playButtons.forEach((b) => (b.disabled = !ready));
+    if (ready && current === 'menu') playButtons[0].focus();
   });
 
   function show(screen: Screen) {

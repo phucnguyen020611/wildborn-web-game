@@ -430,6 +430,115 @@ p {
   }
 }
 
+/* ---------- Tribal War HUD ---------- */
+
+.tdm-score {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font: 700 1.75rem/1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.tdm-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.tdm-team.team0 {
+  box-shadow: inset 0 -3px 0 #c0391b;
+}
+
+.tdm-team.team1 {
+  box-shadow: inset 0 -3px 0 #2563c9;
+}
+
+.tdm-mark {
+  font-size: 1rem;
+}
+
+.tdm-clock {
+  font-size: 1.25rem;
+  color: var(--muted);
+}
+
+.tdm-feed {
+  position: absolute;
+  top: 60px;
+  right: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font: 700 1rem/1.2 var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+.tdm-feed li {
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.45);
+  animation: toast 4s ease-out forwards;
+}
+
+.tdm-weapons {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: 6px;
+}
+
+.tdm-weapons li {
+  min-width: 72px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  font: 700 0.95rem/1.15 var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--muted);
+}
+
+.tdm-weapons li.on {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.tdm-weapons .key {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.tdm-respawn {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font: 700 2rem/1 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* ---------- Act select, bag ---------- */
 
 .acts {
