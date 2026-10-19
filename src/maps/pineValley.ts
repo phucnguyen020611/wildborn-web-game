@@ -43,13 +43,16 @@ function height(x: number, z: number) {
   // calmer along the trail so it stays walkable.
   let h =
     0.5 + Math.max(0, fbm(x / 45 + 10, z / 45, 11) - 0.42) * 22 * (0.3 + 0.7 * smooth(2, 9, trail));
-  // Flat camp and arena floors.
+  // Mountains on every edge.
+  const edge = Math.max(Math.abs(x), Math.abs(z));
+  h += smooth(56, 78, edge) * (14 + 8 * fbm(x / 20, z / 20, 5));
+  // Flat camp and arena floors, carved out of the mountains' foot where they reach it.
   h += (0.6 - h) * (1 - smooth(CAMP.r, CAMP.r + 8, near(CAMP, x, z)));
   h += (1.2 - h) * (1 - smooth(ARENA.r, ARENA.r + 6, near(ARENA, x, z)));
   // Creek bed; shallower at the ford so the trail crosses in ankle-deep water.
   const bed = WATER - (trail < 4 ? 0.25 : 1);
   h += (bed - h) * (1 - smooth(2, 7, Math.abs(z - creekZ(x))));
-  // Ridge around the arena (south side open), and mountains on every edge.
+  // Ridge around the arena (south side open).
   const ring = near(ARENA, x, z);
   const entrance = smooth(0.6, 0.85, (ARENA.z - z) / (ring || 1)); // ~35° cone facing south
   h +=
@@ -57,8 +60,6 @@ function height(x: number, z: number) {
     smooth(ARENA.r + 1, ARENA.r + 6, ring) *
     smooth(ARENA.r + 14, ARENA.r + 8, ring) *
     (1 - entrance);
-  const edge = Math.max(Math.abs(x), Math.abs(z));
-  h += smooth(56, 78, edge) * (14 + 8 * fbm(x / 20, z / 20, 5));
   return h;
 }
 
