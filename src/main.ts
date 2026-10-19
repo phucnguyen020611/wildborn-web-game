@@ -14,6 +14,7 @@ import { createAudio } from './audio/audio';
 import { loadCreature } from './render/creature';
 import { loadProps } from './render/props';
 import { CREATURES } from './config/creatures';
+import { LOOT } from './config/items';
 import { testArena } from './maps/testArena';
 import { pineValley } from './maps/pineValley';
 import { groundAt } from './sim/terrain';
@@ -250,7 +251,14 @@ function main() {
       });
     },
     (alpha) => {
-      world.creatures.forEach((c, i) => views[i]?.update(prev.creatures[i], c.state, alpha));
+      world.creatures.forEach((c, i) =>
+        views[i]?.update(
+          prev.creatures[i],
+          c.state,
+          alpha,
+          c.state.mode === 'dead' && !c.looted && Object.keys(LOOT[c.kind]).length > 0,
+        ),
+      );
       hud.update(world, map);
       herbNodes.forEach((n, i) => n.setEnabled(!world.taken[i]));
       audio.heartbeat(state === 'playing' ? lowHealth(world.playerHp) : 0);

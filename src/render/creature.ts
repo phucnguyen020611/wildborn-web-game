@@ -24,6 +24,7 @@ const urls = import.meta.glob<string>('../assets/creatures/*.glb', {
 });
 
 const FLASH = new Color3(0.9, 0.15, 0.1);
+const LOOT_GLOW = new Color3(0.35, 0.26, 0.05); // same gold as glowing herbs
 const TELEGRAPH = new Color3(0.85, 0.5, 0.05); // amber: about to attack (shown even when the model has an attack clip)
 const ONE_SHOT: CreatureMode[] = ['attack', 'dead']; // play once and hold the last pose
 
@@ -174,7 +175,8 @@ export async function loadCreature(
     flash() {
       flashUntil = performance.now() + 120;
     },
-    update(prev: CreatureState, curr: CreatureState, alpha: number) {
+    /** `lootable`: dead and not yet skinned, so it glows to say E will skin it. */
+    update(prev: CreatureState, curr: CreatureState, alpha: number, lootable = false) {
       const dead = curr.mode === 'dead';
       const rollOver = dead && !anims.dead;
       node.position.set(
@@ -192,6 +194,7 @@ export async function loadCreature(
       if (now < flashUntil) glow.copyFrom(FLASH);
       else if (curr.mode === 'attack')
         TELEGRAPH.scaleToRef(0.35 + 0.25 * Math.sin(now / 50), glow); // pulsing, not a solid wash
+      else if (lootable) LOOT_GLOW.scaleToRef(0.6 + 0.4 * Math.sin(now / 300), glow);
       else glow.set(0, 0, 0);
       for (const m of materials) m.emissiveColor = glow;
     },

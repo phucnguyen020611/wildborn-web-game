@@ -13,6 +13,7 @@ export interface PropConfig {
   castsShadow?: boolean; // keep to a few big shapes: every caster is drawn again into the shadow map
   scale?: number; // base size multiplier when scattered (the kit models some plants oversized)
   drawDistance?: number; // meters; small plants are hidden beyond this (fog mostly covers the pop)
+  glow?: boolean; // collectible: its model gets its own material with a soft golden pulse
 }
 
 const trunk = { w: 0.6, d: 0.6, h: 6 };
@@ -53,7 +54,7 @@ export const PROPS = {
   bush: { nodes: ['Bush_Common_Flowers'], drawDistance: 70 },
   fern: { nodes: ['Fern_1'], drawDistance: near },
   plant: { nodes: ['Plant_7'], drawDistance: near },
-  herb: { nodes: ['Plant_1'], drawDistance: 60 }, // pickup (map.pickups): the only Plant_1 on the map, so it reads as 'the herb'
+  herb: { nodes: ['Plant_1'], drawDistance: 60, glow: true }, // pickup (map.pickups): the only Plant_1 on the map, so it reads as 'the herb'
   grass_tall: { nodes: ['Grass_Common_Tall', 'Grass_Wispy_Tall'], scale: 0.6, drawDistance: near }, // 1.6-1.8 m -> ~1 m
   grass_short: {
     nodes: ['Grass_Common_Short', 'Grass_Wispy_Short'],

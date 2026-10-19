@@ -23,10 +23,23 @@ export async function loadProps(
 ) {
   const used = [...new Set(props.map((p) => (PROPS[p.id] as PropConfig).kit ?? 'forest'))];
   const kits = await Promise.all(used.map((k) => loadContainer(KITS[k], scene)));
+  // Collectibles pulse gold so they read as "take me" among the plants. They get their own material (the
+  // kit's is shared with other plants), cloned before wind is added: a plugin can't be cloned.
+  const glowNodes = new Set(
+    (Object.values(PROPS) as PropConfig[]).filter((c) => c.glow).flatMap((c) => c.nodes),
+  );
+  const glowing: PBRMaterial[] = [];
   const meshes = kits.flatMap((kit) => {
     kit.addAllToScene();
+    const clones: PBRMaterial[] = [];
+    for (const m of kit.meshes)
+      if (m.material && glowNodes.has(m.name.replace(/_primitive\d+$/, ''))) {
+        m.material = m.material.clone(`${m.material.name}_glow`)!;
+        clones.push(m.material as PBRMaterial);
+      }
+    glowing.push(...clones);
     // Double-sided foliage: light the back faces too instead of rendering them black.
-    for (const mat of kit.materials) {
+    for (const mat of [...kit.materials, ...clones]) {
       if (!mat.backFaceCulling) (mat as PBRMaterial).twoSidedLighting = true;
       windForKit(mat);
     }
@@ -46,6 +59,11 @@ export async function loadProps(
     parts.set(name, [...(parts.get(name) ?? []), part]);
     m.isVisible = false; // the source stays hidden; its instances render
   }
+  if (glowing.length)
+    scene.onBeforeRenderObservable.add(() => {
+      const k = 0.25 + 0.2 * Math.sin(performance.now() / 300);
+      for (const m of glowing) m.emissiveColor.set(k, k * 0.75, k * 0.15);
+    });
   // Small plants vanish past their draw distance (instances follow their source mesh's LOD).
   for (const cfg of Object.values(PROPS) as PropConfig[])
     if (cfg.drawDistance)

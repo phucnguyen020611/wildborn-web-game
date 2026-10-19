@@ -65,7 +65,7 @@ export const addWind = (material: Material, strength: number) => new WindPlugin(
 const KIT_WIND: [RegExp, number][] = [
   [/^Bark_DeadTree/, 0.0012],
   [/^(Bark_NormalTree|Leaves_NormalTree|Leaves_Pine)/, 0.0022],
-  [/^(Leaves|Grass|Flowers)$/, 0.05],
+  [/^(Leaves|Grass|Flowers)(_glow)?$/, 0.05],
 ];
 
 export function windForKit(material: Material) {
