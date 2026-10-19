@@ -14,6 +14,7 @@ export type GameEvent =
   | { type: 'throw' }
   | { type: 'hit'; creature: number; damage: number; killed: boolean; at: Vec3 } // creature = index in world.creatures
   | { type: 'stick'; at: Vec3 } // thrown spear landed
+  | { type: 'strike'; at: Vec3; ground: boolean } // thrust stopped by the ground or a solid prop
   | { type: 'pickup' }
   | { type: 'hurt'; damage: number } // player took damage
   | { type: 'end'; outcome: 'won' | 'lost' };
@@ -108,6 +109,12 @@ export function stepWorld(w: World, cmd: PlayerCommand, map: MapData, dt: number
     if (i >= 0) {
       w.spear.hit = true;
       hit(w, i, cfg.damage, tip);
+    } else {
+      const solid = firstSolid(map, eye, dir, cfg.reach);
+      if (solid) {
+        w.spear.hit = true;
+        w.events.push({ type: 'strike', ...solid });
+      }
     }
   }
 
@@ -220,6 +227,18 @@ function hitsCreature(a: Vec3, b: Vec3, { kind, state: c }: Creature) {
   const front = { x: c.x + hx, y: c.y + hb.height, z: c.z + hz };
   const back = { x: c.x - hx, y: c.y + hb.height, z: c.z - hz };
   return segmentDistance(a, b, back, front) < hb.radius;
+}
+
+/** Where a thrust from `eye` along `dir` first meets the ground or a box within `reach` (10 cm steps), or null. */
+function firstSolid(map: MapData, eye: Vec3, dir: Vec3, reach: number) {
+  for (let d = 0.3; d <= reach + 1e-6; d += 0.1) {
+    const p = add(eye, dir, d);
+    const g = groundAt(map, p.x, p.z);
+    if (p.y <= g) return { at: { x: p.x, y: g, z: p.z }, ground: true };
+    if (map.boxes.some((b) => p.y < boxTop(b) && p.y >= (b.y ?? 0) && overlapsBox(p, 0.02, b)))
+      return { at: p, ground: false };
+  }
+  return null;
 }
 
 /** Unit view vector; pitch positive looks down. */

@@ -9,9 +9,10 @@ import type { CreatureConfig } from '../config/creatures';
 import type { CreatureMode, CreatureState } from '../sim/creature';
 import type { Vec3 } from '../sim/geometry';
 import { Ray } from '@babylonjs/core/Culling/ray';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { CreateDisc } from '@babylonjs/core/Meshes/Builders/discBuilder';
+import { CreatePlane } from '@babylonjs/core/Meshes/Builders/planeBuilder';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 
 const MAX_WOUNDS = 8;
@@ -25,6 +26,49 @@ const urls = import.meta.glob<string>('../assets/creatures/*.glb', {
 const FLASH = new Color3(0.9, 0.15, 0.1);
 const TELEGRAPH = new Color3(0.85, 0.5, 0.05); // amber: about to attack (shown even when the model has an attack clip)
 const ONE_SHOT: CreatureMode[] = ['attack', 'dead']; // play once and hold the last pose
+
+/** Spear wound: dark puncture, wet red rim, blood running down (canvas bottom = down) and a few flecks. */
+function woundTexture(scene: Scene, name: string) {
+  const tex = new DynamicTexture(`${name}_wound_tex`, 128, scene, true);
+  const c = tex.getContext() as CanvasRenderingContext2D;
+  const blob = (x: number, y: number, rx: number, ry: number, fill: string) => {
+    c.fillStyle = fill;
+    c.beginPath();
+    c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    c.fill();
+  };
+  c.clearRect(0, 0, 128, 128);
+  // Runs: tapering streaks down from the wound, ending in a drop.
+  for (const [x, len, w] of [
+    [58, 50, 5],
+    [67, 36, 4],
+    [72, 22, 3],
+  ]) {
+    c.fillStyle = 'rgba(95,6,5,0.95)';
+    c.beginPath();
+    c.moveTo(x - w, 52);
+    c.quadraticCurveTo(x - w * 0.4, 52 + len * 0.7, x, 52 + len);
+    c.quadraticCurveTo(x + w * 0.4, 52 + len * 0.7, x + w, 52);
+    c.fill();
+    blob(x, 52 + len, w * 0.8, w, 'rgba(95,6,5,0.95)');
+  }
+  for (let i = 0; i < 10; i++) {
+    const a = i * 2.4;
+    blob(
+      64 + Math.cos(a) * (20 + (i % 3) * 7),
+      44 + Math.sin(a) * (16 + (i % 4) * 5),
+      2 + (i % 3),
+      2 + (i % 2),
+      'rgba(120,10,8,0.9)',
+    );
+  }
+  blob(64, 44, 19, 15, 'rgba(120,10,8,0.95)');
+  blob(64, 44, 11, 8, 'rgba(60,3,3,1)');
+  blob(64, 44, 5, 3.5, 'rgba(15,0,0,1)');
+  tex.update();
+  tex.hasAlpha = true;
+  return tex;
+}
 
 /** Loads a rigged glTF and drives position + animation from creature sim state. */
 export async function loadCreature(
@@ -75,9 +119,12 @@ export async function loadCreature(
   }
 
   const woundMat = new StandardMaterial(`${cfg.model}_wound`, scene);
-  woundMat.diffuseColor = new Color3(0.32, 0.03, 0.03);
-  woundMat.specularColor = new Color3(0.35, 0.2, 0.2); // a little wet sheen
+  woundMat.diffuseTexture = woundTexture(scene, cfg.model);
+  woundMat.useAlphaFromDiffuseTexture = true;
+  woundMat.specularColor = new Color3(0.45, 0.25, 0.25); // wet sheen
+  woundMat.specularPower = 40;
   woundMat.backFaceCulling = false;
+  woundMat.zOffset = -2;
   const wounds: Mesh[] = [];
 
   return {
@@ -93,20 +140,26 @@ export async function loadCreature(
         container.meshes.includes(m),
       );
       if (!hit?.pickedPoint) return;
-      const normal = hit.getNormal(true) ?? dir.scale(-1);
+      const normal = (hit.getNormal(true) ?? dir.scale(-1)).normalize();
       const disc =
         wounds.length >= MAX_WOUNDS
           ? wounds.shift()!
-          : CreateDisc(
-              `${cfg.model}_wound`,
-              { radius: 0.07 + Math.random() * 0.05, tessellation: 8 },
-              scene,
-            );
+          : CreatePlane(`${cfg.model}_wound`, { size: 1 }, scene);
       disc.material = woundMat;
       disc.isPickable = false;
       disc.parent = null;
+      disc.scaling.setAll((0.22 + Math.random() * 0.08) * Math.max(1, cfg.hitbox.radius * 2)); // small: a flat decal pokes out past curved edges
       disc.position.copyFrom(hit.pickedPoint.add(normal.scale(0.01)));
-      disc.lookAt(disc.position.add(normal)); // disc faces along the surface normal
+      // Face out along the normal with the texture's top toward world up, so the drip runs downhill.
+      let top = Vector3.Up().subtract(normal.scale(normal.y));
+      if (top.lengthSquared() < 1e-4) top = Vector3.Forward();
+      top.normalize();
+      const forward = normal.negate();
+      disc.rotationQuaternion = Quaternion.RotationQuaternionFromAxis(
+        Vector3.Cross(top, forward),
+        top,
+        forward,
+      );
       disc.computeWorldMatrix(true); // setParent keeps the world pose, so both matrices must be current
       node.computeWorldMatrix(true);
       disc.setParent(node);

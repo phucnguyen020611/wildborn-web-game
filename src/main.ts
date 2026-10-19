@@ -74,6 +74,7 @@ function main() {
   const views: (Awaited<ReturnType<typeof loadCreature>> | null)[] = world.creatures.map(
     () => null,
   );
+  const trail = world.creatures.map((c) => ({ x: c.state.x, z: c.state.z })); // where each last dripped
   if (import.meta.env.DEV)
     Object.assign(window, { scene: renderer.scene, renderer, views, world, prev, input, map }); // console inspection
   if (map.props)
@@ -142,6 +143,14 @@ function main() {
         else if (e.type === 'stick') {
           audio.play('sfx_stick', e.at);
           renderer.effects.dust(e.at);
+        } else if (e.type === 'strike') {
+          audio.play('sfx_stick', e.at);
+          renderer.effects.strike(
+            e.at,
+            e.ground,
+            renderer.camera.position,
+            renderer.camera.getForwardRay().direction,
+          );
         } else if (e.type === 'hurt') {
           audio.play('sfx_hurt');
           renderer.shake();
@@ -160,10 +169,21 @@ function main() {
           renderer.shake();
           views[e.creature]?.flash();
           views[e.creature]?.wound(renderer.camera.position, e.at);
-          renderer.effects.blood(e.at);
+          renderer.effects.blood(e.at, renderer.camera.position);
           hud.hitMarker(e.killed);
         }
       }
+      // Wounded animals leave a blood trail to follow.
+      world.creatures.forEach((c, i) => {
+        const s = c.state;
+        const last = trail[i];
+        if (s.mode === 'dead' || s.hp >= CREATURES[c.kind].hp)
+          return void (trail[i] = { x: s.x, z: s.z });
+        if (Math.hypot(s.x - last.x, s.z - last.z) > 0.9) {
+          renderer.effects.drip(s.x, s.z);
+          trail[i] = { x: s.x, z: s.z };
+        }
+      });
     },
     (alpha) => {
       world.creatures.forEach((c, i) => views[i]?.update(prev.creatures[i], c.state, alpha));

@@ -111,6 +111,31 @@ describe('stepWorld combat', () => {
     expect(w.thrown).toBeNull();
   });
 
+  it('a thrust into the ground or a wall strikes it once instead of passing through', () => {
+    const empty: MapData = { ...map, creatures: [] };
+    const w = createWorld(empty);
+    stepWorld(w, { ...cmd(true), pitch: 1.2 }, empty, DT); // looking steeply down
+    const events = [];
+    for (let i = 0; i < 30; i++) {
+      stepWorld(w, { ...cmd(), pitch: 1.2 }, empty, DT);
+      events.push(...w.events);
+    }
+    const strikes = events.filter((e) => e.type === 'strike');
+    expect(strikes).toHaveLength(1);
+    expect(strikes[0]).toMatchObject({ ground: true, at: { y: 0 } });
+
+    const walled: MapData = { ...empty, boxes: [{ x: 0, z: 1.5, w: 4, d: 1, h: 3 }] };
+    const v = createWorld(walled);
+    stepWorld(v, { ...cmd(true), pitch: 0 }, walled, DT);
+    const hits = [];
+    for (let i = 0; i < 30; i++) {
+      stepWorld(v, { ...cmd(), pitch: 0 }, walled, DT);
+      hits.push(...v.events.filter((e) => e.type === 'strike'));
+    }
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ ground: false, at: { z: expect.closeTo(1, 1) } });
+  });
+
   it('a spear thrown into a wall drops at its base', () => {
     const walled: MapData = { ...map, boxes: [{ x: 0, z: 5, w: 4, d: 1, h: 3 }] };
     const w = createWorld(walled);
