@@ -18,7 +18,7 @@ npm run dev      # http://localhost:5173
 | `npm test`                        | Unit test (simulation, game loop, khớp key i18n) |
 | `npm run lint` / `npm run format` | ESLint / Prettier                                |
 
-**Điều khiển:** WASD di chuyển · chuột để nhìn · chuột trái đâm giáo · chuột phải ném giáo (đi tới chỗ giáo rơi để nhặt) · Space nhảy · Shift chạy · Esc tạm dừng · F3 bật/tắt debug overlay (`?debug` để bật ở bản build).
+**Điều khiển:** WASD di chuyển · chuột để nhìn · chuột trái đâm giáo · chuột phải ném giáo (đi tới chỗ giáo rơi để nhặt) · Space nhảy · Shift chạy · E hái thảo dược / lột thú đã hạ · Q dùng thuốc đắp · Tab mở túi đồ để chế đồ (game tạm dừng) · Esc tạm dừng · F3 bật/tắt debug overlay (`?debug` để bật ở bản build).
 
 **Cài đặt** (menu chính hoặc menu tạm dừng): độ nhạy chuột, đảo trục dọc, FOV, chất lượng Thấp/Vừa/Cao (Thấp: không bóng, không phản chiếu, không thảm cỏ; Vừa: bóng 2 tầng, cỏ trong 28 m; Cao: bóng 3 tầng, cỏ trong 42 m), rung và nhún camera (tự tắt nếu hệ điều hành bật giảm chuyển động), âm lượng tổng/hiệu ứng/môi trường. Lưu trong trình duyệt (`localStorage`).
 
