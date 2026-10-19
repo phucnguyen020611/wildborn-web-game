@@ -95,7 +95,7 @@ export function createGround(scene: Scene, map: MapData, reflection: BaseTexture
   if (map.water !== undefined) {
     // The mirror shows the sky, the ground and the big shapes along the banks (not grass or flowers).
     const big = /^(sky|ground|tree_|rock_|tent|log|bones)/;
-    createWater(scene, map.size, map.water, reflection, (m) => big.test(m.name));
+    createWater(scene, map, map.water, reflection, (m) => big.test(m.name));
   }
   return ground;
 }
