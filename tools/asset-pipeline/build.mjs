@@ -78,6 +78,7 @@ for (const file of walk(SRC)) {
   if (/^art-source\/textures\/.*\.(png|jpe?g)$/i.test(file.replaceAll('\\', '/'))) {
     // Standalone textures (terrain): KTX2 with mipmaps. Colour: ETC1S at full size. Normal maps (`_nor`):
     // UASTC at half size, linear, RDO + zstd: from walking height 512² is plenty and a quarter the bytes.
+    // Not --normal-mode: it moves Y into alpha (RGB=X), which Babylon's materials don't read.
     if (!hasKtx) {
       console.error('! `ktx` CLI not found: cannot encode textures.');
       process.exit(1);
@@ -94,7 +95,7 @@ for (const file of walk(SRC)) {
           '0.5',
           '--encode',
           'uastc',
-        ].concat(['--uastc-quality', '2', '--uastc-rdo', '--zstd', '18', '--normal-mode'])
+        ].concat(['--uastc-quality', '2', '--uastc-rdo', '--zstd', '18'])
       : ['--format', 'R8G8B8_SRGB', '--encode', 'basis-lz'];
     const r = spawnSync('ktx', ['create', ...args, '--generate-mipmap', file, out], {
       stdio: 'inherit',
