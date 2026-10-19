@@ -194,6 +194,48 @@ export const pineValley: MapData = {
         { x: -30, z: 18 },
       ],
     },
+    // Deer herd grazing the east meadow, led by a stag.
+    {
+      kind: 'deer',
+      waypoints: [
+        { x: 36, z: -4 },
+        { x: 48, z: 4 },
+        { x: 44, z: -8 },
+      ],
+    },
+    {
+      kind: 'deer',
+      waypoints: [
+        { x: 40, z: -1 },
+        { x: 50, z: 8 },
+        { x: 38, z: 6 },
+      ],
+    },
+    {
+      kind: 'stag',
+      waypoints: [
+        { x: 44, z: 2 },
+        { x: 52, z: -4 },
+        { x: 46, z: 10 },
+      ],
+    },
+    // A wolf pair in the north-west woods, off the trail: the danger for anyone who strays.
+    {
+      kind: 'wolf',
+      waypoints: [
+        { x: -40, z: 26 },
+        { x: -30, z: 34 },
+        { x: -44, z: 40 },
+      ],
+    },
+    {
+      kind: 'wolf',
+      waypoints: [
+        { x: -36, z: 22 },
+        { x: -28, z: 30 },
+        { x: -38, z: 36 },
+      ],
+    },
     {
       kind: 'mammoth', // grazes in its clearing
       waypoints: [

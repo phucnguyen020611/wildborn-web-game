@@ -16,5 +16,6 @@ bpy.ops.export_scene.gltf(
     export_format="GLB",
     export_apply=True,  # bake modifiers (bevel, subdivision...) into the mesh
     export_animations=True,
+    export_def_bones=True,  # skip IK/pole control bones: they don't move vertices, only add animation data
     export_yup=True,  # Blender is Z-up; glTF is Y-up
 )
