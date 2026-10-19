@@ -128,3 +128,30 @@ Menu hiện trước khi model tải xong, nhưng trong lúc đó chưa có gì 
 - Shader cỏ biên dịch bất đồng bộ nên xuất hiện sau vài khung đầu.
 - Vẫn cần chạy `?bench` trên máy tầm trung và trên Chrome thật.
 
+## 2026-10-19 — D2: chặng 1 lên 400 × 400 m
+
+**Đo bằng:** như nhóm B: 30 khung liên tiếp, chờ GPU (`readPixels`), browser pane Chromium, Apple M4, canvas 1536×1152, mặc định (Vừa). Khoảng 10.800 instance prop, 16 con thú.
+
+| Góc nhìn | Ban đầu (ms) | Sau tối ưu (ms) | CPU sau tối ưu (ms) |
+|---|---|---|---|
+| Trại chính | 19,8 | 13,1 | 8,9 |
+| Chỗ lội suối | 21,5 | 13,6 | 9,2 |
+| Giữa thung lũng | 21,4 | 11,1 | 7,6 |
+| Rừng phía tây | 19,7 | 13,2 | 8,8 |
+| Đồng cỏ phía đông | 18,6 | 11,2 | 7,4 |
+| Trại tiền đồn | 18,6 | 11,5 | 7,4 |
+| Cửa bãi đấu | 18,7 | 11,6 | 7,1 |
+
+- **Nút thắt là CPU, không phải GPU.** Hai thứ tốn nhất khi map to:
+  - 4.459 vật đổ bóng bị duyệt lại ở từng tầng bóng.
+  - Hàm lọc của gương nước chạy qua toàn bộ khoảng 11.000 mesh mỗi lần vẽ.
+- **Cách sửa:**
+  - Chỉ vật trong bán kính 70 m mới vào danh sách đổ bóng, danh sách được dựng lại mỗi khi camera đi được 4 m.
+  - Kết quả "có nên phản chiếu không" được tính một lần cho mỗi mesh; chỉ phản chiếu vật đứng gần mép nước.
+- **Các thay đổi để map to tải nhanh:**
+  - Rải prop: kiểm tra chỗ trống theo lưới 8 m. Trước đây là O(n²), với khoảng 7.600 prop sẽ rất chậm.
+  - Cỏ: chỉ tính khi ô vào tầm.
+  - Prop: gom theo ô 32 m, ô ngoài tầm vẽ bị tắt hẳn nên không tốn cả bước culling.
+  - Kết quả: nút Chơi bật sau khoảng 1,8 giây (dev server).
+- Vẫn chậm hơn map 160 m (8–11 ms). Phần CPU còn lại chủ yếu là Babylon duyệt khoảng 11.000 mesh mỗi khung hình. Nếu máy tầm trung chậm: giảm số cỏ cao và cỏ ba lá rải trên map, hoặc gộp các prop nhỏ thành thin instance theo ô.
+

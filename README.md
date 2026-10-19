@@ -22,7 +22,7 @@ npm run dev      # http://localhost:5173
 
 **Cài đặt** (menu chính hoặc menu tạm dừng): độ nhạy chuột, đảo trục dọc, FOV, chất lượng Thấp/Vừa/Cao (Thấp: không bóng, không phản chiếu, không thảm cỏ; Vừa: bóng 2 tầng, cỏ trong 28 m; Cao: bóng 3 tầng, cỏ trong 42 m), rung và nhún camera (tự tắt nếu hệ điều hành bật giảm chuyển động), âm lượng tổng/hiệu ứng/môi trường. Lưu trong trình duyệt (`localStorage`).
 
-**Map:** mặc định là **Thung lũng Thông** (vùng 1, xem [docs/STORY_MODE.md](docs/STORY_MODE.md)): xuất phát ở trại phía nam, theo lối mòn lội qua suối, băng qua đồng cỏ tới bãi đấu của ma mút ở phía bắc. Arena thử nghiệm cũ vẫn mở được bằng `?map=arena`.
+**Map:** mặc định là **Thung lũng Thông** (chặng 1, 400 × 400 m, xem [docs/STORY_MODE.md](docs/STORY_MODE.md)): xuất phát ở trại phía nam, lội qua suối, chọn một trong ba tuyến (rừng phía tây, lối mòn giữa, đồng cỏ phía đông) tới trại tiền đồn dưới con đèo, rồi vào bãi đấu của ma mút. Nghỉ ở lửa trại (E) để hồi máu và lưu; gục ngã thì tỉnh dậy ở trại đã nghỉ. Arena thử nghiệm cũ vẫn mở được bằng `?map=arena`.
 
 **Vòng chơi:** săn **voi ma mút** ở bãi đấu cuối lối mòn. Ma mút nổi giận khi bạn tới gần (khoảng 12 m) hoặc khi bị đánh. Trước mỗi cú húc, nó **ngẩng đầu và nhấp nháy màu hổ phách**: lùi ra hoặc né sang ngang, vì hướng húc đã khóa từ lúc báo đòn. Nó quay chậm, nên vòng ra sườn mà đâm. Cáo là thú nền: chạy trốn, bị đánh thì cắn lại. Hạ ma mút là thắng, hết máu là thua. Nhảy từ độ cao hơn khoảng 3,5 m sẽ mất máu; sườn dốc hơn khoảng 42° không leo được mà bị trượt xuống. Khi máu dưới 30%, màn hình nhạt màu dần và có tiếng tim đập.
 

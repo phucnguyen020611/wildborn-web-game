@@ -25,7 +25,7 @@ Kể chuyện tối giản: tranh vẽ hang động giữa các act, lời già 
 - **Bố cục hình phễu:** trại ở một đầu, bãi boss ở đầu kia. Ở giữa là vùng mở có **nhiều đường đi** (lối mòn chính, đường vòng qua rừng, đường men suối), đi hướng nào cũng dồn về cửa bãi boss.
 - **Dẫn đường bằng cảnh, không bằng mũi tên:** lối mòn sáng màu, khói lửa trại, cây đổ và xương thú lớn dần khi gần boss, dấu chân to, vách núi chắn hướng sai.
 - **Điểm phụ ngoài đường chính:** hang boss phụ, bãi thảo dược, xác thú. Đi lệch đường thì được thưởng đồ.
-- **Kích thước:** act 1 hiện là 160 × 160 m. Mục tiêu 400–500 m mỗi cạnh, cần **chia ô và tải dần** (địa hình, prop, cỏ theo ô quanh người chơi). Đây là phần kỹ thuật lớn nhất, làm ở giai đoạn D2.
+- **Kích thước:** act 1 là 400 × 400 m. Prop được gom theo ô 32 m và chỉ bật trong tầm vẽ; cỏ được dựng theo ô 16 m khi lại gần (tối đa 3 ô mỗi khung hình); chỉ vật trong bán kính 70 m mới đổ bóng.
 
 ## Vòng chơi trong một act (~20–30 phút)
 
@@ -45,7 +45,7 @@ Kể chuyện tối giản: tranh vẽ hang động giữa các act, lời già 
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
 | **D1 — lõi chơi** | Màn chọn act + lưu tiến trình; túi đồ, hái thảo dược, lột thú (phím E); chế đồ (phím Tab); thuốc hồi máu (Q); nâng cấp giáo; boss phụ Sói đầu đàn ở act 1 | **Xong** (2026-10-19): `src/config/items.ts`, `src/config/acts.ts`, `src/core/progress.ts`, `src/ui/acts.ts`, `src/ui/bag.ts`; 18 bụi thảo dược và hang sói đầu đàn ở tây bắc map act 1 |
-| **D2 — map rộng** | Act 1 lên 400–500 m, chia ô tải dần; nhiều đường đi + điểm phụ; dẫn đường bằng cảnh (dấu chân, xương, khói); trại checkpoint, gục ngã quay về trại | Chưa |
+| **D2 — map rộng** | Act 1 lên 400–500 m, chia ô tải dần; nhiều đường đi + điểm phụ; dẫn đường bằng cảnh (dấu chân, xương, khói); trại checkpoint, gục ngã quay về trại | **Xong** (2026-10-19): 400 m; 3 tuyến (tây: rừng sói, giữa: lối chính, đông: đồng cỏ và hồ) dồn về trại tiền đồn dưới con đèo duy nhất; điểm phụ: hang sói đầu đàn, trại bỏ hoang, bãi thảo dược, đồi quan sát. Nghỉ ở lửa trại (E): hồi máu, lưu túi đồ, đặt điểm hồi sinh. Gục ngã: tỉnh dậy ở trại, giữ đồ; boss và boss phụ hồi máu |
 | **D3 — act 2, 3** | Map Rừng Xoắn, Đèo Tuyết; hổ răng kiếm, tê giác, gấu hang, bò rừng, lợn rừng, dê núi; vũ khí mới; tranh hang động giữa các act | Chưa |
 
 ## Asset cần thêm
